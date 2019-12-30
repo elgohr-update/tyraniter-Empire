@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>EmpireCompiler</id>
+    <version>1.0.0</version>
+    <authors>EmpireCompiler</authors>
+    <owners>EmpireCompiler</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Package Description</description>
+    <dependencies>
+      <group targetFramework=".NETCoreApp3.0">
+        <dependency id="Microsoft.CodeAnalysis.CSharp" version="3.5.0-beta1-final" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.EntityFrameworkCore.Sqlite" version="3.1.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.IdentityModel.Tokens" version="5.6.0" exclude="Build,Analyzers" />
+        <dependency id="System.CommandLine.Experimental" version="0.3.0-alpha.19577.1" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="E:\git\EmpireCompiler\bin\Debug\netcoreapp3.0\EmpireCompiler.runtimeconfig.json" target="lib\netcoreapp3.0\EmpireCompiler.runtimeconfig.json" />
+    <file src="E:\git\EmpireCompiler\bin\Debug\netcoreapp3.0\EmpireCompiler.dll" target="lib\netcoreapp3.0\EmpireCompiler.dll" />
+  </files>
+</package>

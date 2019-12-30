@@ -60,6 +60,7 @@ import threading
 import pickle
 import netifaces
 import random
+import commands
 
 import subprocess
 import fnmatch
@@ -1004,3 +1005,51 @@ def slackMessage(slackToken, slackChannel, slackText):
     data = urllib.parse.urlencode({'token': slackToken, 'channel': slackChannel, 'text': slackText})
     req = urllib.request.Request(url, data)
     resp = urllib.request.urlopen(req)
+
+def check_dotnet_module_compiled(installPath,moduleName,version):
+    file_path =  installPath + 'data/dotnet/Compiled/'+version+'/'+moduleName+'.compiled'
+    if_exist = os.path.exists(file_path)
+    if if_exist:
+        fsize = os.path.getsize(file_path)
+        if fsize > 0:
+            return True
+        else:
+            return False
+    else:
+        return False
+
+def compile_dotnet_module(installPath,moduleName):
+    command='dotnet '+installPath+'data/dotnet/compiler/bin/Release/netcoreapp3.0/EmpireCompiler.dll -t '+moduleName
+    status,output = commands.getstatusoutput(command)
+    if status == 0:
+        return True
+    else:
+        return False
+
+def compile_dotnet_module_with_source(installPath,moduleName,sourceFile,outputKind):
+    command='dotnet '+installPath+'data/dotnet/compiler/bin/Release/netcoreapp3.0/EmpireCompiler.dll -t '+moduleName+' -s '+sourceFile+' -o ' + outputKind
+    status,output = commands.getstatusoutput(command)
+    if status == 0:
+        return True
+    else:
+        return False 
+
+def get_dotnet_module_assembly(installPath,moduleName,version):
+    file_path =  installPath + 'data/dotnet/compiler/data/Compiled/net'+version.replace('.','')+'/'+moduleName+('.compiled' if outputKind==2 else '.exe')
+    if check_dotnet_module_compiled(installPath,moduleName,version):
+        with open(file_path,'rb') as f:
+            return f.read()
+    else:
+        compile_dotnet_module(installPath,moduleName)
+        with open(file_path,'rb') as f:
+            return f.read()
+
+def get_dotnet_module_assembly_with_source(installPath,moduleName,sourceFile,version,outputKind):
+    file_path =  installPath + 'data/dotnet/compiler/data/Compiled/net'+version.replace('.','')+'/'+moduleName+('.compiled' if outputKind==2 else '.exe')
+    if check_dotnet_module_compiled(installPath,moduleName,version):
+        with open(file_path,'rb') as f:
+            return f.read()
+    else:
+        compile_dotnet_module_with_source(installPath,moduleName,sourceFile,outputKind)
+        with open(file_path,'rb') as f:
+            return f.read()

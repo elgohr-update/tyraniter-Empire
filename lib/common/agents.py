@@ -1269,7 +1269,7 @@ class Agents(object):
                 dispatcher.send(signal, sender="agents/{}".format(sessionID))
                 return 'ERROR: HMAC verification failed'
 
-            if language.lower() == 'powershell':
+            if language.lower() in ('powershell','dotnet'):
                 # strip non-printable characters
                 message = ''.join([x for x in message.decode('UTF-8') if x in string.printable])
 

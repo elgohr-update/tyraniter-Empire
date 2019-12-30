@@ -787,6 +787,14 @@ class MainMenu(cmd.Cmd):
             # reload all modules
             print("\n" + helpers.color("[*] Reloading all modules.") + "\n")
             self.modules.load_modules()
+        elif line.strip().lower() == "listeners":
+            # reload all listeners
+            print("\n" + helpers.color("[*] Reloading all listeners.") + "\n")
+            self.listeners.load_listeners()
+        elif line.strip().lower() == "stagers":
+            # reload all listeners
+            print("\n" + helpers.color("[*] Reloading all stagers.") + "\n")
+            self.stagers.load_stagers()
         elif os.path.isdir(line.strip()):
             # if we're loading an external directory
             self.modules.load_modules(rootPath=line.strip())
@@ -995,7 +1003,7 @@ class MainMenu(cmd.Cmd):
     def complete_usemodule(self, text, line, begidx, endidx, language=None):
         "Tab-complete an Empire module path."
         
-        module_names = list(self.modules.modules.keys())
+        module_names = list(self.modules.modules.keys()) + ["all","listeners","stagers"]
         
         # suffix each module requiring elevated context with '*'
         for module_name in module_names:
@@ -1809,6 +1817,9 @@ class AgentMenu(SubMenu):
             agent_menu.cmdloop()
         elif agentLanguage.lower() == 'python':
             agent_menu = PythonAgentMenu(mainMenu, sessionID)
+            agent_menu.cmdloop()
+        elif agentLanguage.lower() == 'dotnet':
+            agent_menu = DotNetAgentMenu(mainMenu, sessionID)
             agent_menu.cmdloop()
         else:
             print(helpers.color("[!] Agent language %s not recognized." % (agentLanguage)))
@@ -2789,6 +2800,337 @@ class PowerShellAgentMenu(SubMenu):
         "Tab-complete 'creds' commands."
         return self.mainMenu.complete_creds(text, line, begidx, endidx)
 
+class DotNetAgentMenu(SubMenu):
+    def __init__(self, mainMenu, sessionID):
+
+        SubMenu.__init__(self, mainMenu)
+        self.sessionID = sessionID
+        self.doc_header = 'Agent Commands'
+        dispatcher.connect(self.handle_agent_event, sender=dispatcher.Any)
+
+        # try to resolve the sessionID to a name
+        name = self.mainMenu.agents.get_agent_name_db(sessionID)
+
+        # set the text prompt
+        self.prompt = '(Empire: ' + helpers.color(name, 'red') + ') > '
+
+        # agent commands that have opsec-safe alises in the agent code
+        self.agentCommands = ['ls', 'dir', 'rm', 'del', 'cp', 'copy', 'pwd', 'cat', 'cd', 'mkdir', 'rmdir', 'mv', 'move', 'ipconfig', 'ifconfig', 'route', 'reboot', 'restart', 'shutdown', 'ps', 'tasklist', 'getpid', 'whoami', 'getuid', 'hostname']
+
+        # display any results from the database that were stored
+        # while we weren't interacting with the agent
+        results = self.mainMenu.agents.get_agent_results_db(self.sessionID)
+        if results:
+            print("\n" + results.rstrip('\r\n'))
+
+    def handle_agent_event(self, signal, sender):
+        """
+        Handle agent event signals
+        """
+        # load up the signal so we can inspect it
+        try:
+            signal_data = json.loads(signal)
+        except ValueError:
+            print(helpers.color("[!] Error: bad signal recieved {} from sender {}".format(signal, sender)))
+            return
+
+        if '{} returned results'.format(self.sessionID) in signal:
+            results = self.mainMenu.agents.get_agent_results_db(self.sessionID)
+            if results:
+                print(helpers.color(results))
+    
+    def do_list(self, line):
+        "Lists all active agents (or listeners)."
+
+        if line.lower().startswith("listeners"):
+            self.mainMenu.do_list("listeners " + str(' '.join(line.split(' ')[1:])))
+        elif line.lower().startswith("agents"):
+            self.mainMenu.do_list("agents " + str(' '.join(line.split(' ')[1:])))
+        else:
+            print(helpers.color("[!] Please use 'list [agents/listeners] <modifier>'."))
+    
+    def do_info(self,line):
+        "Display information about this agent"
+
+        agent = self.mainMenu.agents.get_agent_db(self.sessionID)
+        messages.display_agent(agent)
+
+    def do_usemodule(self,line):
+        "Use an Empire DotNet module."
+        
+        # Strip asterisks added by MainMenu.complete_usemodule()
+        module = "dotnet/%s" %(line.strip().rstrip("*"))
+
+        if module not in self.mainMenu.modules.modules:
+            print(helpers.color("[!] Error: invalid module"))
+        else:
+            module_menu = ModuleMenu(self.mainMenu, module, agent=self.sessionID)
+            module_menu.cmdloop()
+
+    def do_shell(self, line):
+        "Task an agent to use a shell command."
+        line = line.strip()
+
+        if line != "":
+            # task the agent with this shell command
+            #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+            # dispatch this event
+            message = "[*] Tasked agent to run shell command {}".format(line)
+            signal = json.dumps({
+                'print': False,
+                'message': message
+            })
+            dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+            # update the agent log
+            if self.mainMenu.modules.modules['dotnet/code_execution/shell_cmd']:
+                msg = "Tasked agent to run shell command " + line
+                module = self.mainMenu.modules.modules['dotnet/code_execution/shell_cmd']
+                module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+                module.options['Command']['Value'] = line
+
+                # execute the screenshot module
+                module_menu = ModuleMenu(self.mainMenu, 'dotnet/code_execution/shell_cmd')
+                module_menu.do_execute("")
+                self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+            else:
+                print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+
+    def do_download(self, line):
+        "Task an agent to download a file."
+        line = line.strip()
+
+        if line != "":
+            # task the agent with this shell command
+            #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+            # dispatch this event
+            message = "[*] Task an agent to download {}".format(line)
+            signal = json.dumps({
+                'print': False,
+                'message': message
+            })
+            dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+            # update the agent log
+            if self.mainMenu.modules.modules['dotnet/management/download']:
+                msg = "Tasked agent to run shell command " + line
+                module = self.mainMenu.modules.modules['dotnet/management/download']
+                module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+                module.options['FilePath']['Value'] = line
+
+                # execute the screenshot module
+                module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/download')
+                module_menu.do_execute("")
+                self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+            else:
+                print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+    
+    def do_upload(self, line):
+        "Task an agent to upload a file."
+        parts = line.strip().split(' ')
+        uploadname = ""
+
+        if len(parts) > 0 and parts[0] != "":
+            if len(parts) == 1:
+                # if we're uploading the file with its original name
+                uploadname = os.path.basename(parts[0])
+            else:
+                # if we're uploading the file as a different name
+                uploadname = parts[1].strip()
+
+            if parts[0] != "" and os.path.exists(parts[0]):
+                # Check the file size against the upload limit of 1 mb
+
+                # read in the file and base64 encode it for transport
+                open_file = open(parts[0], 'r')
+                file_data = open_file.read()
+                open_file.close()
+
+                size = os.path.getsize(parts[0])
+                if size > 1048576:
+                    print(helpers.color("[!] File size is too large. Upload limit is 1MB."))
+                else:
+                    # dispatch this event
+                    message = "[*] Tasked agent to upload {}, {}".format(uploadname, helpers.get_file_size(file_data))
+                    signal = json.dumps({
+                        'print': True,
+                        'message': message,
+                        'file_name': uploadname,
+                        'file_md5': hashlib.md5(file_data).hexdigest(),
+                        'file_size': helpers.get_file_size(file_data)
+                    })
+                    dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+                    # update the agent log
+                    msg = "Tasked agent to upload %s : %s" % (parts[0], hashlib.md5(file_data).hexdigest())
+                    self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+
+                    # upload packets -> "filename | script data"
+                    file_data = helpers.encode_base64(file_data)
+                    if self.mainMenu.modules.modules['dotnet/management/upload']:
+                        msg = "Tasked agent to run shell command " + line
+                        module = self.mainMenu.modules.modules['dotnet/management/upload']
+                        module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+                        module.options['FileName']['Value'] = uploadname
+                        module.options['FileContent']['Value'] = file_data
+
+                        # execute the screenshot module
+                        module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/upload')
+                        module_menu.do_execute("")
+                        self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+                    else:
+                        print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+            else:
+                print(helpers.color("[!] Please enter a valid file path to upload"))
+
+    def do_ls(self, line):
+        "Task an agent to run 'ls' command."
+        line = line.strip()
+
+        # task the agent with this shell command
+        #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+        # dispatch this event
+        message = "[*] Task an agent to run shell command ls"
+        signal = json.dumps({
+            'print': False,
+            'message': message
+        })
+        dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+        # update the agent log
+        if self.mainMenu.modules.modules['dotnet/management/list_directory']:
+            msg = "Tasked agent to run shell command ls"
+            module = self.mainMenu.modules.modules['dotnet/management/list_directory']
+            module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+            module.options['FilePath']['Value'] = line
+
+            # execute the screenshot module
+            module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/list_directory')
+            module_menu.do_execute("")
+            self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+        else:
+            print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+    
+    def do_pwd(self, line):
+        "Task an agent to run 'pwd' command."
+        line = line.strip()
+
+        # task the agent with this shell command
+        #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+        # dispatch this event
+        message = "[*] Task an agent to run shell command ls"
+        signal = json.dumps({
+            'print': False,
+            'message': message
+        })
+        dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+        # update the agent log
+        if self.mainMenu.modules.modules['dotnet/management/get_current_directory']:
+            msg = "Tasked agent to run shell command ls"
+            module = self.mainMenu.modules.modules['dotnet/management/get_current_directory']
+            module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+
+            # execute the screenshot module
+            module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/get_current_directory')
+            module_menu.do_execute("")
+            self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+        else:
+            print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+    
+    def do_whoami(self, line):
+        "Task an agent to run 'whoami' command."
+        line = line.strip()
+
+        # task the agent with this shell command
+        #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+        # dispatch this event
+        message = "[*] Task an agent to run shell command whoami"
+        signal = json.dumps({
+            'print': False,
+            'message': message
+        })
+        dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+        # update the agent log
+        if self.mainMenu.modules.modules['dotnet/management/whoami']:
+            msg = "Tasked agent to run shell command whoami"
+            module = self.mainMenu.modules.modules['dotnet/management/whoami']
+            module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+
+            # execute the screenshot module
+            module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/whoami')
+            module_menu.do_execute("")
+            self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+        else:
+            print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+
+    def do_cd(self, line):
+        "Task an agent to run 'cd' command."
+        line = line.strip()
+
+        if line != "":
+            # task the agent with this shell command
+            #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+            # dispatch this event
+            message = "[*] Task an agent to upload {}".format(line)
+            signal = json.dumps({
+                'print': False,
+                'message': message
+            })
+            dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+            # update the agent log
+            if self.mainMenu.modules.modules['dotnet/management/change_directory']:
+                msg = "Tasked agent to run shell command " + line
+                module = self.mainMenu.modules.modules['dotnet/management/change_directory']
+                module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+                module.options['Directory']['Value'] = line
+
+                # execute the screenshot module
+                module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/change_directory')
+                module_menu.do_execute("")
+                self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+            else:
+                print(helpers.color("[!] powershell/collection/screenshot module not loaded")) 
+
+    def do_ps(self,line):
+        "Task an agent to run 'ps' command."
+        line = line.strip()
+
+        # task the agent with this shell command
+        #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+        # dispatch this event
+        message = "[*] Task an agent to run shell command ps"
+        signal = json.dumps({
+            'print': False,
+            'message': message
+        })
+        dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+        # update the agent log
+        if self.mainMenu.modules.modules['dotnet/management/process_list']:
+            msg = "Tasked agent to run shell command ls"
+            module = self.mainMenu.modules.modules['dotnet/management/process_list']
+            module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+
+            # execute the screenshot module
+            module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/process_list')
+            module_menu.do_execute("")
+            self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+        else:
+            print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+
+    def complete_usemodule(self, text, line, begidx, endidx):
+        "Tab-complete an Empire PowerShell module path"
+        return self.mainMenu.complete_usemodule(text, line, begidx, endidx, language='dotnet')
 
 class PythonAgentMenu(SubMenu):
     

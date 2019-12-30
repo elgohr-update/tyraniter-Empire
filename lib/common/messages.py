@@ -194,6 +194,8 @@ def display_agents(agents):
                 agent['language'] = 'ps'
             elif agent['language'].lower() == 'python':
                 agent['language'] = 'py'
+            elif agent['language'].lower() == 'dotnet':
+                agent['language'] = 'dn'
             else:
                 agent['language'] = 'X'
 

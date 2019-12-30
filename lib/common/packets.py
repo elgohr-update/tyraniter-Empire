@@ -121,7 +121,8 @@ for name, ID in list(PACKET_NAMES.items()): PACKET_IDS[ID] = name
 LANGUAGE = {
     'NONE': 0,
     'POWERSHELL': 1,
-    'PYTHON': 2
+    'PYTHON': 2,
+    'DOTNET' : 3,
 }
 LANGUAGE_IDS = {}
 for name, ID in list(LANGUAGE.items()): LANGUAGE_IDS[ID] = name

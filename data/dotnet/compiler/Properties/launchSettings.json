@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "EmpireCompiler": {
+      "commandName": "Project",
+      "commandLineArgs": "-t Launcher -s Launcher.task -o 1"
+    }
+  }
+}
