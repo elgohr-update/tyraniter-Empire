@@ -38,7 +38,7 @@ namespace EmpireCompiler
 
             //0 console exe 1 windows exe 2 dll
             Option outputkind = new Option(aliases: new string[] { "-o", "--outputkind" });
-            outputkind.Argument = new Argument<int>();
+            outputkind.Argument = new Argument<int>(defaultValue: () => 2);
 
             rootCommand.AddOption(initial);
             rootCommand.AddOption(task);
