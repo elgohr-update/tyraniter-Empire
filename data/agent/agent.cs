@@ -131,7 +131,7 @@ namespace Agent
             {
                 //SendMessage(EncodePacket(type, $"task ID {resultID} started", resultID));
                 //String result=StartAgentJob(type, msg, resultID);
-                return EncodePacket(type, result, resultID);
+                return EncodePacket(type, $"task ID {resultID} started", resultID);
             }
             else if (type == 50)
             {
