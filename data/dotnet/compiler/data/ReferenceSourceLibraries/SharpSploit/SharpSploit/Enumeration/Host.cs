@@ -4,11 +4,15 @@
 
 using System;
 using System.IO;
-using System.Management;
+using System.Linq;
 using System.Diagnostics;
+using System.Security.Principal;
 using System.Collections.Generic;
+using System.Security.AccessControl;
+using System.Runtime.InteropServices;
 
 using SharpSploit.Generic;
+using SharpSploit.Execution;
 
 namespace SharpSploit.Enumeration
 {
@@ -23,17 +27,162 @@ namespace SharpSploit.Enumeration
         /// <returns>List of ProcessResults.</returns>
         public static SharpSploitResultList<ProcessResult> GetProcessList()
         {
-            Process[] processes = Process.GetProcesses();
+            var processorArchitecture = GetArchitecture();
+            Process[] processes = Process.GetProcesses().OrderBy(P => P.Id).ToArray();
             SharpSploitResultList<ProcessResult> results = new SharpSploitResultList<ProcessResult>();
             foreach (Process process in processes)
             {
-                var search = new ManagementObjectSearcher("root\\CIMV2", string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", process.Id));
-		        var pidresult = search.Get().GetEnumerator();
-                pidresult.MoveNext();
-                var parentId = (uint)pidresult.Current["ParentProcessId"];
-                results.Add(new ProcessResult(process.Id, Convert.ToInt32(parentId), process.ProcessName));
+                int processId = process.Id;
+                int parentProcessId = GetParentProcess(process);
+                string processName = process.ProcessName;
+                string processPath = string.Empty;
+                int sessionId = process.SessionId;
+                string processOwner = GetProcessOwner(process);
+                Win32.Kernel32.Platform processArch = Win32.Kernel32.Platform.Unknown;
+
+                if (parentProcessId != 0)
+                {
+                    try
+                    {
+                        processPath = process.MainModule.FileName;
+                    }
+                    catch (System.ComponentModel.Win32Exception) { }
+                }
+
+                if (processorArchitecture == Win32.Kernel32.Platform.x64)
+                {
+                    processArch = IsWow64(process) ? Win32.Kernel32.Platform.x86 : Win32.Kernel32.Platform.x64;
+                }
+                else if (processorArchitecture == Win32.Kernel32.Platform.x86)
+                {
+                    processArch = Win32.Kernel32.Platform.x86;
+                }
+                else if (processorArchitecture == Win32.Kernel32.Platform.IA64)
+                {
+                    processArch = Win32.Kernel32.Platform.x86;
+                }
+                results.Add(new ProcessResult
+                {
+                    Pid = processId,
+                    Ppid = parentProcessId,
+                    Name = processName,
+                    Path = processPath,
+                    SessionID = sessionId,
+                    Owner = processOwner,
+                    Architecture = processArch
+                });
             }
             return results;
+        }
+
+        /// <summary>
+        /// Gets the architecture of the OS.
+        /// </summary>
+        /// <author>Daniel Duggan (@_RastaMouse)</author>
+        public static Win32.Kernel32.Platform GetArchitecture()
+        {
+            const ushort PROCESSOR_ARCHITECTURE_INTEL = 0;
+            const ushort PROCESSOR_ARCHITECTURE_IA64 = 6;
+            const ushort PROCESSOR_ARCHITECTURE_AMD64 = 9;
+
+            var sysInfo = new Win32.Kernel32.SYSTEM_INFO();
+            Win32.Kernel32.GetNativeSystemInfo(ref sysInfo);
+
+            switch (sysInfo.wProcessorArchitecture)
+            {
+                case PROCESSOR_ARCHITECTURE_AMD64:
+                    return Win32.Kernel32.Platform.x64;
+                case PROCESSOR_ARCHITECTURE_INTEL:
+                    return Win32.Kernel32.Platform.x86;
+                case PROCESSOR_ARCHITECTURE_IA64:
+                    return Win32.Kernel32.Platform.IA64;
+                default:
+                    return Win32.Kernel32.Platform.Unknown;
+            }
+        }
+
+        /// <summary>
+        /// Gets the parent process id of a Process
+        /// </summary>
+        /// <author>Daniel Duggan (@_RastaMouse)</author>
+        /// <param name="Process"></param>
+        /// <returns>Parent Process Id. Returns 0 if unsuccessful</returns>
+        public static int GetParentProcess(Process Process)
+        {
+            try
+            {
+                return GetParentProcess(Process.Handle);
+            }
+            catch (InvalidOperationException)
+            {
+                return 0;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the parent process id of a process handle
+        /// </summary>
+        /// <author>Daniel Duggan (@_RastaMouse)</author>
+        /// <param name="Handle">Handle to the process to get the parent process id of</param>
+        /// <returns>Parent Process Id</returns>
+        private static int GetParentProcess(IntPtr Handle)
+        {
+            var basicProcessInformation = new Win32.NtDll.PROCESS_BASIC_INFORMATION();
+            Win32.NtDll.NtQueryInformationProcess(Handle, Win32.NtDll.PROCESSINFOCLASS.ProcessBasicInformation, ref basicProcessInformation, Marshal.SizeOf(basicProcessInformation), out int returnLength);
+            return basicProcessInformation.InheritedFromUniqueProcessId;
+        }
+
+        /// <summary>
+        /// Gets the username of the owner of a process
+        /// </summary>
+        /// <author>Daniel Duggan (@_RastaMouse)</author>
+        /// <param name="Process">Process to get owner of</param>
+        /// <returns>Username of process owner. Returns empty string if unsuccessful.</returns>
+        public static string GetProcessOwner(Process Process)
+        {
+            try
+            {
+                Win32.Kernel32.OpenProcessToken(Process.Handle, 8, out IntPtr handle);
+                using (var winIdentity = new WindowsIdentity(handle))
+                {
+                    return winIdentity.Name;
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                return string.Empty;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Checks if a process is a Wow64 process
+        /// </summary>
+        /// <author>Daniel Duggan (@_RastaMouse)</author>
+        /// <param name="Process">Process to check Wow64</param>
+        /// <returns>True if process is Wow64, false otherwise. Returns false if unsuccessful.</returns>
+        public static bool IsWow64(Process Process)
+        {
+            try
+            {
+                Win32.Kernel32.IsWow64Process(Process.Handle, out bool isWow64);
+                return isWow64;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -154,17 +303,71 @@ namespace SharpSploit.Enumeration
         /// Gets a directory listing of a directory.
         /// </summary>
         /// <param name="Path">The path of the directory to get a listing of.</param>
-        /// <returns>List of FileSystemEntryResults.</returns>
+        /// <returns>SharpSploitResultList of FileSystemEntryResults.</returns>
 		public static SharpSploitResultList<FileSystemEntryResult> GetDirectoryListing(string Path)
         {
             SharpSploitResultList<FileSystemEntryResult> results = new SharpSploitResultList<FileSystemEntryResult>();
             foreach (string dir in Directory.GetDirectories(Path))
             {
-                results.Add(new FileSystemEntryResult(dir));
+                DirectoryInfo dirInfo = new DirectoryInfo(dir);
+                results.Add(new FileSystemEntryResult
+                {
+                    Name = dirInfo.FullName,
+                    Length = 0,
+                    CreationTimeUtc = dirInfo.CreationTimeUtc,
+                    LastAccessTimeUtc = dirInfo.LastAccessTimeUtc,
+                    LastWriteTimeUtc = dirInfo.LastWriteTimeUtc
+                });
             }
             foreach (string file in Directory.GetFiles(Path))
             {
-                results.Add(new FileSystemEntryResult(file));
+                FileInfo fileInfo = new FileInfo(file);
+                results.Add(new FileSystemEntryResult
+                {
+                    Name = fileInfo.FullName,
+                    Length = fileInfo.Length,
+                    CreationTimeUtc = fileInfo.CreationTimeUtc,
+                    LastAccessTimeUtc = fileInfo.LastAccessTimeUtc,
+                    LastWriteTimeUtc = fileInfo.LastWriteTimeUtc
+                });
+            }
+            return results;
+        }
+
+        /// <summary>
+        /// Gets a DACL of a file or directory.
+        /// </summary>
+        /// <param name="Path">The path of the file or directory to get a DACL for.</param>
+        /// <returns>List of DaclResults. NULL if not found.</returns>
+        /// <author>Daniel Duggan (@_RastaMouse)</author>
+		public static SharpSploitResultList<DaclResult> GetDacl(string Path)
+        {
+            if (File.Exists(Path))
+            {
+                return GetDaclResults(new FileInfo(Path).GetAccessControl());
+            }
+            if (Directory.Exists(Path))
+            {
+                DirectoryInfo dInfo = new DirectoryInfo(Path);
+                return GetDaclResults(new DirectoryInfo(Path).GetAccessControl());
+            }
+            return null;
+        }
+
+        private static SharpSploitResultList<DaclResult> GetDaclResults(FileSystemSecurity SecurityEntry)
+        {
+            SharpSploitResultList<DaclResult> results = new SharpSploitResultList<DaclResult>();
+            foreach (FileSystemAccessRule ace in SecurityEntry.GetAccessRules(true, true, typeof(NTAccount)))
+            {
+                results.Add(new DaclResult
+                {
+                    IdentityReference = ace.IdentityReference.Value,
+                    AccessControlType = ace.AccessControlType,
+                    FileSystemRights = ace.FileSystemRights,
+                    IsInherited = ace.IsInherited,
+                    InheritanceFlags = ace.InheritanceFlags,
+                    PropagationFlags = ace.PropagationFlags
+                });
             }
             return results;
         }
@@ -183,39 +386,27 @@ namespace SharpSploit.Enumeration
         /// </summary>
         public sealed class ProcessResult : SharpSploitResult
         {
-            public int Pid { get; } = 0;
-            public int Ppid { get; } = 0;
-            public string Name { get; } = "";
+            public int Pid { get; set; } = 0;
+            public int Ppid { get; set; } = 0;
+            public string Name { get; set; } = "";
+            public string Path { get; set; } = "";
+            public int SessionID { get; set; } = 0;
+            public string Owner { get; set; } = "";
+            public Win32.Kernel32.Platform Architecture { get; set; } = Win32.Kernel32.Platform.Unknown;
             protected internal override IList<SharpSploitResultProperty> ResultProperties
             {
                 get
                 {
-                    return new List<SharpSploitResultProperty>
-                    {
-                        new SharpSploitResultProperty
-                        {
-                            Name = "Pid",
-                            Value = this.Pid
-                        },
-                        new SharpSploitResultProperty
-                        {
-                            Name = "Ppid",
-                            Value = this.Ppid
-                        },
-                        new SharpSploitResultProperty
-                        {
-                            Name = "Name",
-                            Value = this.Name
-                        }
+                    return new List<SharpSploitResultProperty> {
+                        new SharpSploitResultProperty { Name = "Pid", Value = this.Pid },
+                        new SharpSploitResultProperty { Name = "Ppid", Value = this.Ppid },
+                        new SharpSploitResultProperty { Name = "Name", Value = this.Name },
+                        new SharpSploitResultProperty { Name = "SessionID", Value = this.SessionID },
+                        new SharpSploitResultProperty { Name = "Owner", Value = this.Owner },
+                        new SharpSploitResultProperty { Name = "Architecture", Value = this.Architecture },
+                        new SharpSploitResultProperty { Name = "Path", Value = this.Path }
                     };
                 }
-            }
-
-            public ProcessResult(int Pid = 0, int Ppid = 0, string Name = "")
-            {
-                this.Pid = Pid;
-                this.Ppid = Ppid;
-                this.Name = Name;
             }
         }
 
@@ -224,7 +415,11 @@ namespace SharpSploit.Enumeration
         /// </summary>
         public sealed class FileSystemEntryResult : SharpSploitResult
         {
-            public string Name { get; } = "";
+            public string Name { get; set; } = "";
+            public long Length { get; set; } = 0;
+            public DateTime CreationTimeUtc { get; set; } = new DateTime();
+            public DateTime LastAccessTimeUtc { get; set; } = new DateTime();
+            public DateTime LastWriteTimeUtc { get; set; } = new DateTime();
             protected internal override IList<SharpSploitResultProperty> ResultProperties
             {
                 get
@@ -235,14 +430,56 @@ namespace SharpSploit.Enumeration
                         {
                             Name = "Name",
                             Value = this.Name
+                        },
+                        new SharpSploitResultProperty
+                        {
+                            Name = "Length",
+                            Value = this.Length
+                        },
+                        new SharpSploitResultProperty
+                        {
+                            Name = "CreationTimeUtc",
+                            Value = this.CreationTimeUtc
+                        },
+                        new SharpSploitResultProperty
+                        {
+                            Name = "LastAccessTimeUtc",
+                            Value = this.LastAccessTimeUtc
+                        },
+                        new SharpSploitResultProperty
+                        {
+                            Name = "LastWriteTimeUtc",
+                            Value = this.LastWriteTimeUtc
                         }
                     };
                 }
             }
+        }
 
-            public FileSystemEntryResult(string Name = "")
+        /// <summary>
+        /// DaclResult represents a DACL of a file or directory on disk, used with the GetDacl() function.
+        /// </summary>
+        public sealed class DaclResult : SharpSploitResult
+        {
+            public string IdentityReference { get; set; } = "";
+            public AccessControlType AccessControlType { get; set; } = new AccessControlType();
+            public FileSystemRights FileSystemRights { get; set; } = new FileSystemRights();
+            public bool IsInherited { get; set; } = false;
+            public InheritanceFlags InheritanceFlags { get; set; } = new InheritanceFlags();
+            public PropagationFlags PropagationFlags { get; set; } = new PropagationFlags();
+            protected internal override IList<SharpSploitResultProperty> ResultProperties
             {
-                this.Name = Name;
+                get
+                {
+                    return new List<SharpSploitResultProperty> {
+                        new SharpSploitResultProperty { Name = "IdentityReference", Value = this.IdentityReference },
+                        new SharpSploitResultProperty { Name = "AccessControlType", Value = this.AccessControlType },
+                        new SharpSploitResultProperty { Name = "FileSystemRights", Value = this.FileSystemRights },
+                        new SharpSploitResultProperty { Name = "IsInherited", Value = this.IsInherited },
+                        new SharpSploitResultProperty { Name = "InheritanceFlags", Value = this.InheritanceFlags },
+                        new SharpSploitResultProperty { Name = "PropagationFlags", Value = this.PropagationFlags }
+                    };
+                }
             }
         }
     }

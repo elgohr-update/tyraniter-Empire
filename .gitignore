@@ -16,7 +16,7 @@ setup/bomutils/
 .venv
 .DS_Store
 venv/
-
 data/dotnet/compiler/bin/*
 data/dotnet/compiler/data/Compiled/*
 data/dotnet/compiler/data/temp/*
+data/dotnet/compiler/data/covenant.db

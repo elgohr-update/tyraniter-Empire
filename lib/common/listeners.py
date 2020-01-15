@@ -67,6 +67,28 @@ class Listeners(object):
                 # instantiate the listener module and save it to the internal cache
                 self.loadedListeners[listenerName] = imp.load_source(listenerName, filePath).Listener(self.mainMenu, [])
 
+    def reload_listener(self, listenerToReload):
+            """
+            Reload a specific stager from the install + "/lib/stagers/*" path
+            """
+
+            rootPath = "%s/lib/listeners/" % (self.mainMenu.installPath)
+            pattern = '*.py'
+            
+            for root, dirs, files in os.walk(rootPath):
+                for filename in fnmatch.filter(files, pattern):
+                    filePath = os.path.join(root, filename)
+
+                    # don't load up the template
+                    if filename == 'template.py': continue
+                    
+                    # extract just the module name from the full path
+                    listenerName = filePath.split("/lib/listeners/")[-1][0:-3]
+
+                    # check to make sure we've found the specific module
+                    if listenerName.lower() == listenerToReload.lower():
+                        # instantiate the module and save it to the internal cache
+                        self.loadedListeners[listenerName] = imp.load_source(listenerName, filePath).Listener(self.mainMenu, [])
 
     def set_listener_option(self, listenerName, option, value):
         """
@@ -342,6 +364,10 @@ class Listeners(object):
         cur.close()
         self.conn.row_factory = oldFactory
 
+    def restart_listener(self, listenerName):
+        self.shutdown_listener(listenerName)
+        self.reload_listener(listenerName)
+        self.enable_listener(listenerName)
 
     def kill_listener(self, listenerName):
         """

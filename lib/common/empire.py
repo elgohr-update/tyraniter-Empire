@@ -783,14 +783,10 @@ class MainMenu(cmd.Cmd):
     def do_reload(self, line):
         "Reload one (or all) Empire modules."
         
-        if line.strip().lower() == "all":
+        if line.strip().lower() == "modules":
             # reload all modules
             print("\n" + helpers.color("[*] Reloading all modules.") + "\n")
             self.modules.load_modules()
-        elif line.strip().lower() == "listeners":
-            # reload all listeners
-            print("\n" + helpers.color("[*] Reloading all listeners.") + "\n")
-            self.listeners.load_listeners()
         elif line.strip().lower() == "stagers":
             # reload all listeners
             print("\n" + helpers.color("[*] Reloading all stagers.") + "\n")
@@ -799,12 +795,15 @@ class MainMenu(cmd.Cmd):
             # if we're loading an external directory
             self.modules.load_modules(rootPath=line.strip())
         else:
-            if line.strip() not in self.modules.modules:
-                print(helpers.color("[!] Error: invalid module"))
-            else:
+            if line.strip() in self.modules.modules:
                 print("\n" + helpers.color("[*] Reloading module: " + line) + "\n")
                 self.modules.reload_module(line)
-    
+            elif line.strip() in self.stagers.stagers:
+                print("\n" + helpers.color("[*] Reloading module: " + line) + "\n")
+                self.stagers.reload_stager(line)
+            else:
+                print(helpers.color("[!] Error: invalid module or stager"))
+
     
     def do_list(self, line):
         "Lists active agents or listeners."
@@ -1029,7 +1028,7 @@ class MainMenu(cmd.Cmd):
     def complete_reload(self, text, line, begidx, endidx):
         "Tab-complete an Empire PowerShell module path."
         
-        module_names = list(self.modules.modules.keys()) + ["all"]
+        module_names = list(self.modules.modules.keys()) + list(self.stagers.stagers.keys()) + ["stagers"] + ["modules"]
         
         mline = line.partition(' ')[2]
         offs = len(mline) - len(text)
@@ -3100,6 +3099,34 @@ class DotNetAgentMenu(SubMenu):
             else:
                 print(helpers.color("[!] powershell/collection/screenshot module not loaded")) 
 
+    def do_sc(self,line):
+        "Task an agent to run screenshot."
+        line = line.strip()
+
+        # task the agent with this shell command
+        #self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_SHELL", "shell " + str(line))
+
+        # dispatch this event
+        message = "[*] Task an agent to run screenshot"
+        signal = json.dumps({
+            'print': False,
+            'message': message
+        })
+        dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+
+        # update the agent log
+        if self.mainMenu.modules.modules['dotnet/collection/screenshot']:
+            msg = "Tasked agent to run shell command ls"
+            module = self.mainMenu.modules.modules['dotnet/collection/screenshot']
+            module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+
+            # execute the screenshot module
+            module_menu = ModuleMenu(self.mainMenu, 'dotnet/collection/screenshot')
+            module_menu.do_execute("")
+            self.mainMenu.agents.save_agent_log(self.sessionID, msg)
+        else:
+            print(helpers.color("[!] dotnet/collection/screenshot module not loaded"))
+    
     def do_ps(self,line):
         "Task an agent to run 'ps' command."
         line = line.strip()
@@ -3126,8 +3153,44 @@ class DotNetAgentMenu(SubMenu):
             module_menu.do_execute("")
             self.mainMenu.agents.save_agent_log(self.sessionID, msg)
         else:
-            print(helpers.color("[!] powershell/collection/screenshot module not loaded"))
+            print(helpers.color("[!] dotnet/management/process_list module not loaded"))
 
+    def do_jobs(self, line):
+        "Return jobs or kill a running job."
+        
+        parts = line.split(' ')
+        
+        if len(parts) == 1:
+            if parts[0] == '':
+                self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_GETJOBS")
+                
+                # dispatch this event
+                message = "[*] Tasked agent to get running jobs"
+                signal = json.dumps({
+                    'print': False,
+                    'message': message
+                })
+                dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+                
+                # update the agent log
+                self.mainMenu.agents.save_agent_log(self.sessionID, "Tasked agent to get running jobs")
+            else:
+                print(helpers.color("[!] Please use form 'jobs kill JOB_ID'"))
+        elif len(parts) == 2:
+            jobID = parts[1].strip()
+            self.mainMenu.agents.add_agent_task_db(self.sessionID, "TASK_STOPJOB", jobID)
+            
+            # dispatch this event
+            message = "[*] Tasked agent to stop job {}".format(jobID)
+            signal = json.dumps({
+                'print': False,
+                'message': message
+            })
+            dispatcher.send(signal, sender="agents/{}".format(self.sessionID))
+            
+            # update the agent log
+            self.mainMenu.agents.save_agent_log(self.sessionID, "Tasked agent to stop job " + str(jobID))
+    
     def complete_usemodule(self, text, line, begidx, endidx):
         "Tab-complete an Empire PowerShell module path"
         return self.mainMenu.complete_usemodule(text, line, begidx, endidx, language='dotnet')
@@ -3894,7 +3957,7 @@ class ListenersMenu(SubMenu):
         else:
             self.mainMenu.do_list('listeners ' + str(line))
     
-    
+
     def do_kill(self, line):
         "Kill one or all active listeners."
         
@@ -4036,6 +4099,24 @@ class ListenersMenu(SubMenu):
         else:
             self.mainMenu.listeners.enable_listener(listenerID)
     
+    def do_restart(self, line):
+        "Restart one or all listeners."
+        
+        listenerID = line.strip()
+        
+        if listenerID == '':
+            print(helpers.color("[!] Please provide a listener name"))
+        elif listenerID.lower() == 'all':
+            try:
+                choice = input(helpers.color('[>] Restart all listeners? [y/N] ', 'red'))
+                if choice.lower() != '' and choice.lower()[0] == 'y':
+                    self.mainMenu.listeners.restart_listener('all')
+            except KeyboardInterrupt:
+                print('')
+        
+        else:
+            self.mainMenu.listeners.restart_listener(listenerID)
+
     def do_disable(self, line):
         "Disables (stops) one or all listeners. The listener(s) will not start automatically with Empire"
         
@@ -4084,6 +4165,14 @@ class ListenersMenu(SubMenu):
         
         inactive = self.mainMenu.listeners.get_inactive_listeners()
         names = list(inactive.keys())
+        mline = line.partition(' ')[2]
+        offs = len(mline) - len(text)
+        return [s[offs:] for s in names if s.startswith(mline)]
+    
+    def complete_restart(self, text, line, begidx, endidx):
+        # tab complete for inactive listener names
+        
+        names = list(self.mainMenu.listeners.activeListeners.keys()) + ["all"]
         mline = line.partition(' ')[2]
         offs = len(mline) - len(text)
         return [s[offs:] for s in names if s.startswith(mline)]

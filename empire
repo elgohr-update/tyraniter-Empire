@@ -9,6 +9,8 @@ import hashlib
 from OpenSSL import SSL
 import ssl
 import ast
+import imp
+import shutil
 
 # Empire imports
 from lib.common import empire, helpers
@@ -116,8 +118,11 @@ def get_permanent_token(conn):
 #
 #    GET      http://localhost:1337/api/stagers              return all current stagers
 #    GET      http://localhost:1337/api/stagers/X            return the stager with name X
-#    POST     http://localhost:1337/api/stagers              generate a stager given supplied options (need to implement)
-#
+#    POST     http://localhost:1337/api/stagers              generate a stager given supplied options (need to implement) 
+#    POST     http://localhost:1337/api/stagers/delete       delete stager
+#    POST     http://localhost:1337/api/stagers/update       add/update stager source
+#    POST     http://localhost:1337/api/stagers/source       view stager source
+
 #    GET      http://localhost:1337/api/modules                     return all current modules
 #    GET      http://localhost:1337/api/modules/<name>              return the module with the specified name
 #    POST     http://localhost:1337/api/modules/<name>              execute the given module with the specified options
@@ -126,7 +131,10 @@ def get_permanent_token(conn):
 #    POST     http://localhost:1337/api/modules/search/description  searches module descriptions for a specific term
 #    POST     http://localhost:1337/api/modules/search/description  searches module comments for a specific term
 #    POST     http://localhost:1337/api/modules/search/author       searches module authors for a specific term
-#
+#    POST     http://localhost:1337/api/modules/delete              delete module
+#    POST     http://localhost:1337/api/modules/update              add/update module source
+#    POST     http://localhost:1337/api/modules/source              view module source
+
 #    GET      http://localhost:1337/api/listeners            return all current listeners
 #    GET      http://localhost:1337/api/listeners/Y          return the listener with id Y
 #    GET      http://localhost:1337/api/listeners/options    return all listener options
@@ -380,6 +388,63 @@ def start_restful_api(empireMenu, suppress=False, username=None, password=None, 
 
         return jsonify({stagerName: stagerOut})
 
+    @app.route('/api/stagers/delete', methods=['POST'])
+    def delete_stager():
+        if not request.json or not 'stager_name' in request.json:
+            abort(400)
+
+        stager_name = request.json['stager_name']
+        if stager_name not in main.stagers.stagers.keys():
+            return make_response(jsonify({'error': 'stager name %s not found' %(stager_name)}), 404)
+        
+        stager_file_path = main.installPath+'lib/stagers/'+stager_name+'.py'
+        os.remove(stager_file_path)
+        os.remove(stager_file_path+'c')
+        return jsonify({'success': True})
+
+
+    @app.route('/api/stagers/update', methods=['POST'])
+    def update_stager():
+        if not request.json or not 'stager_name' in request.json or not 'code' in request.json:
+            abort(400)
+
+        stager_name = request.json['stager_name']
+        code = request.json['code']
+
+        stager_file_path = main.installPath+'lib/stagers/'+stager_name+'.py'
+        if stager_name in main.stagers.stagers.keys():
+            shutil.copyfile(stager_file_path,stager_file_path+'.bak')
+            with open(stager_file_path,'w') as f:
+                f.write(code)
+            try:
+                main.stagers.reload_stager(stager_name)
+            except:
+                shutil.copyfile(stager_file_path+'.bak',stager_file_path)
+                return jsonify({'success': False})
+        else:
+            with open(stager_file_path,'w') as f:
+                f.write(code)
+            try:
+                main.stagers.reload_stager(stager_name)
+            except:
+                os.remove(stager_file_path)
+                os.remove(stager_file_path+'.pyc')
+                return jsonify({'success': False})
+        return jsonify({'success': True})
+
+    @app.route('/api/stagers/source', methods=['POST'])
+    def get_stager_source():
+        if not request.json or not 'stager_name' in request.json:
+            abort(400)
+
+        stager_name = request.json['stager_name']
+        if stager_name not in main.stagers.stagers.keys():
+            return make_response(jsonify({'error': 'stager name %s not found' %(stager_name)}), 404)
+        
+        stager_file_path = main.installPath+'lib/stagers/'+stager_name+'.py'
+        with open(stager_file_path,'r') as f:
+            code = f.read()
+        return jsonify({'success': True,'code':code})
 
     @app.route('/api/modules', methods=['GET'])
     def get_modules():
@@ -653,6 +718,63 @@ def start_restful_api(empireMenu, suppress=False, username=None, password=None, 
 
         return jsonify({'modules': modules})
 
+    @app.route('/api/modules/delete', methods=['POST'])
+    def delete_module():
+        if not request.json or not 'module_name':
+            abort(400)
+
+        module_name = request.json['module_name']
+        if module_name not in main.modules.modules.keys():
+            return make_response(jsonify({'error': 'module name %s not found' %(module_name)}), 404)
+        
+        module_file_path = main.installPath+'lib/modules/'+module_name+'.py'
+        os.remove(module_file_path)
+        os.remove(module_file_path+'c')
+        return jsonify({'success': True})
+
+
+    @app.route('/api/modules/update', methods=['POST'])
+    def update_module():
+        if not request.json or not 'module_name':
+            abort(400)
+
+        module_name = request.json['module_name']
+        code = request.json['code']
+
+        module_file_path = main.installPath+'lib/modules/'+module_name+'.py'
+        if module_name in main.modules.modules.keys():
+            shutil.copyfile(module_file_path,module_file_path+'.bak')
+            with open(module_file_path,'w') as f:
+                f.write(code)
+            try:
+                main.modules.reload_module(module_name)
+            except:
+                shutil.copyfile(module_file_path+'.bak',module_file_path)
+                return jsonify({'success': False})
+        else:
+            with open(module_file_path,'w') as f:
+                f.write(code)
+            try:
+                main.modules.reload_module(module_name)
+            except:
+                os.remove(module_file_path)
+                os.remove(module_file_path+'.pyc')
+                return jsonify({'success': False})
+        return jsonify({'success': True})
+
+    @app.route('/api/modules/source', methods=['POST'])
+    def get_module_source():
+        if not request.json or not 'module_name':
+            abort(400)
+
+        module_name = request.json['module_name']
+        if module_name not in main.modules.modules.keys():
+            return make_response(jsonify({'error': 'module name %s not found' %(module_name)}), 404)
+        
+        module_file_path = main.installPath+'lib/modules/'+module_name+'.py'
+        with open(module_file_path,'r') as f:
+            code = f.read()
+        return jsonify({'success': True,'code':code})
 
     @app.route('/api/listeners', methods=['GET'])
     def get_listeners():

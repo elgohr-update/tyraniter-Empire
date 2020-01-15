@@ -61,6 +61,12 @@ namespace SharpSploit.Execution
                 IntPtr hMem
             );
 
+            [DllImport("kernel32.dll", SetLastError = true)]
+            public static extern bool IsWow64Process(
+                IntPtr hProcess,
+                out bool Wow64Process
+            );
+
             [DllImport("kernel32.dll")]
             public static extern IntPtr OpenProcess(
                 ProcessAccessFlags dwDesiredAccess,
@@ -185,6 +191,34 @@ namespace SharpSploit.Execution
                 IntPtr hProcess
             );
 
+            [DllImport("kernel32.dll")]
+            public static extern void GetNativeSystemInfo(
+                ref SYSTEM_INFO lpSystemInfo
+            );
+
+            public struct SYSTEM_INFO
+            {
+                public ushort wProcessorArchitecture;
+                public ushort wReserved;
+                public uint dwPageSize;
+                public IntPtr lpMinimumApplicationAddress;
+                public IntPtr lpMaximumApplicationAddress;
+                public UIntPtr dwActiveProcessorMask;
+                public uint dwNumberOfProcessors;
+                public uint dwProcessorType;
+                public uint dwAllocationGranularity;
+                public ushort wProcessorLevel;
+                public ushort wProcessorRevision;
+            };
+
+            public enum Platform
+            {
+                x86,
+                x64,
+                IA64,
+                Unknown
+            }
+
             [Flags]
             public enum ProcessAccessFlags : UInt32
             {
@@ -204,6 +238,50 @@ namespace SharpSploit.Execution
                 PROCESS_VM_WRITE = 0x0020,
                 SYNCHRONIZE = 0x00100000
             }
+        }
+
+        public static class User32
+        {
+            public static int WH_KEYBOARD_LL { get; } = 13;
+            public static int WM_KEYDOWN { get; } = 0x0100;
+
+            public delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr CallNextHookEx(
+                IntPtr hhk,
+                int nCode,
+                IntPtr wParam,
+                IntPtr lParam
+            );
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto,  SetLastError = true)]
+            public static extern IntPtr GetForegroundWindow();
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern int GetWindowText(
+                IntPtr hWnd,
+                StringBuilder text,
+                int count
+            );
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr SetWindowsHookEx(
+                int idHook,
+                HookProc lpfn,
+                IntPtr hMod,
+                uint dwThreadId
+            );
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern int GetWindowTextLength(IntPtr hWnd);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern short GetKeyState(int nVirtKey);
         }
 
         public static class Netapi32
@@ -260,6 +338,21 @@ namespace SharpSploit.Execution
                 SidTypeComputer = 9
             }
 
+            [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+            public struct SHARE_INFO_1
+            {
+                public string shi1_netname;
+                public uint shi1_type;
+                public string shi1_remark;
+
+                public SHARE_INFO_1(string netname, uint type, string remark)
+                {
+                    this.shi1_netname = netname;
+                    this.shi1_type = type;
+                    this.shi1_remark = remark;
+                }
+            }
+
             [DllImport("netapi32.dll")]
             public static extern int NetLocalGroupEnum(
                 [MarshalAs(UnmanagedType.LPWStr)] string servername,
@@ -304,6 +397,17 @@ namespace SharpSploit.Execution
                 int prefmaxlen,
                 out int entriesread,
                 out int totalentries,
+                ref int resume_handle
+            );
+
+            [DllImport("Netapi32.dll", CharSet = CharSet.Unicode)]
+            public static extern int NetShareEnum(
+                StringBuilder ServerName,
+                int level,
+                ref IntPtr bufPtr,
+                uint prefmaxlen,
+                ref int entriesread,
+                ref int totalentries,
                 ref int resume_handle
             );
 
@@ -585,6 +689,47 @@ namespace SharpSploit.Execution
             [DllImport("advapi32.dll", SetLastError = true)]
             public static extern Boolean RevertToSelf();
 
+            [DllImport("advapi32.dll", SetLastError = true)]
+            public static extern IntPtr OpenSCManager(
+                string machineName,
+                string databaseName,
+                SCM_ACCESS dwAccess
+            );
+
+            [DllImport("advapi32.dll", SetLastError = true)]
+            public static extern IntPtr OpenService(
+                IntPtr hSCManager,
+                string lpServiceName,
+                SERVICE_ACCESS dwDesiredAccess
+            );
+
+            [DllImport("advapi32.dll", SetLastError = true)]
+            public static extern IntPtr CreateService(
+                IntPtr hSCManager,
+                string lpServiceName,
+                string lpDisplayName,
+                SERVICE_ACCESS dwDesiredAccess,
+                SERVICE_TYPE dwServiceType,
+                SERVICE_START dwStartType,
+                SERVICE_ERROR dwErrorControl,
+                string lpBinaryPathName,
+                string lpLoadOrderGroup,
+                string lpdwTagId,
+                string lpDependencies,
+                string lpServiceStartName,
+                string lpPassword
+            );
+
+            [DllImport("advapi32.dll", SetLastError = true)]
+            public static extern bool DeleteService(
+                IntPtr hService
+            );
+
+            [DllImport("advapi32.dll", SetLastError = true)]
+            public static extern bool CloseServiceHandle(
+                IntPtr hSCObject
+            );
+
             //https://msdn.microsoft.com/en-us/library/windows/desktop/ms682434(v=vs.85).aspx
             [Flags]
             public enum CREATION_FLAGS
@@ -623,6 +768,152 @@ namespace SharpSploit.Execution
                 LOGON32_PROVIDER_WINNT35,
                 LOGON32_PROVIDER_WINNT40,
                 LOGON32_PROVIDER_WINNT50
+            }
+
+            [Flags]
+            public enum SCM_ACCESS : uint
+            {
+                SC_MANAGER_CONNECT = 0x00001,
+                SC_MANAGER_CREATE_SERVICE = 0x00002,
+                SC_MANAGER_ENUMERATE_SERVICE = 0x00004,
+                SC_MANAGER_LOCK = 0x00008,
+                SC_MANAGER_QUERY_LOCK_STATUS = 0x00010,
+                SC_MANAGER_MODIFY_BOOT_CONFIG = 0x00020,
+
+                SC_MANAGER_ALL_ACCESS = ACCESS_MASK.STANDARD_RIGHTS_REQUIRED |
+                    SC_MANAGER_CONNECT |
+                    SC_MANAGER_CREATE_SERVICE |
+                    SC_MANAGER_ENUMERATE_SERVICE |
+                    SC_MANAGER_LOCK |
+                    SC_MANAGER_QUERY_LOCK_STATUS |
+                    SC_MANAGER_MODIFY_BOOT_CONFIG,
+
+                GENERIC_READ = ACCESS_MASK.STANDARD_RIGHTS_READ |
+                    SC_MANAGER_ENUMERATE_SERVICE |
+                    SC_MANAGER_QUERY_LOCK_STATUS,
+
+                GENERIC_WRITE = ACCESS_MASK.STANDARD_RIGHTS_WRITE |
+                    SC_MANAGER_CREATE_SERVICE |
+                    SC_MANAGER_MODIFY_BOOT_CONFIG,
+
+                GENERIC_EXECUTE = ACCESS_MASK.STANDARD_RIGHTS_EXECUTE |
+                    SC_MANAGER_CONNECT | SC_MANAGER_LOCK,
+
+                GENERIC_ALL = SC_MANAGER_ALL_ACCESS,
+            }
+
+            [Flags]
+            public enum ACCESS_MASK : uint
+            {
+                DELETE = 0x00010000,
+                READ_CONTROL = 0x00020000,
+                WRITE_DAC = 0x00040000,
+                WRITE_OWNER = 0x00080000,
+                SYNCHRONIZE = 0x00100000,
+                STANDARD_RIGHTS_REQUIRED = 0x000F0000,
+                STANDARD_RIGHTS_READ = 0x00020000,
+                STANDARD_RIGHTS_WRITE = 0x00020000,
+                STANDARD_RIGHTS_EXECUTE = 0x00020000,
+                STANDARD_RIGHTS_ALL = 0x001F0000,
+                SPECIFIC_RIGHTS_ALL = 0x0000FFFF,
+                ACCESS_SYSTEM_SECURITY = 0x01000000,
+                MAXIMUM_ALLOWED = 0x02000000,
+                GENERIC_READ = 0x80000000,
+                GENERIC_WRITE = 0x40000000,
+                GENERIC_EXECUTE = 0x20000000,
+                GENERIC_ALL = 0x10000000,
+                DESKTOP_READOBJECTS = 0x00000001,
+                DESKTOP_CREATEWINDOW = 0x00000002,
+                DESKTOP_CREATEMENU = 0x00000004,
+                DESKTOP_HOOKCONTROL = 0x00000008,
+                DESKTOP_JOURNALRECORD = 0x00000010,
+                DESKTOP_JOURNALPLAYBACK = 0x00000020,
+                DESKTOP_ENUMERATE = 0x00000040,
+                DESKTOP_WRITEOBJECTS = 0x00000080,
+                DESKTOP_SWITCHDESKTOP = 0x00000100,
+                WINSTA_ENUMDESKTOPS = 0x00000001,
+                WINSTA_READATTRIBUTES = 0x00000002,
+                WINSTA_ACCESSCLIPBOARD = 0x00000004,
+                WINSTA_CREATEDESKTOP = 0x00000008,
+                WINSTA_WRITEATTRIBUTES = 0x00000010,
+                WINSTA_ACCESSGLOBALATOMS = 0x00000020,
+                WINSTA_EXITWINDOWS = 0x00000040,
+                WINSTA_ENUMERATE = 0x00000100,
+                WINSTA_READSCREEN = 0x00000200,
+                WINSTA_ALL_ACCESS = 0x0000037F
+            }
+
+            [Flags]
+            public enum SERVICE_ACCESS : uint
+            {
+                SERVICE_QUERY_CONFIG = 0x00001,
+                SERVICE_CHANGE_CONFIG = 0x00002,
+                SERVICE_QUERY_STATUS = 0x00004,
+                SERVICE_ENUMERATE_DEPENDENTS = 0x00008,
+                SERVICE_START = 0x00010,
+                SERVICE_STOP = 0x00020,
+                SERVICE_PAUSE_CONTINUE = 0x00040,
+                SERVICE_INTERROGATE = 0x00080,
+                SERVICE_USER_DEFINED_CONTROL = 0x00100,
+
+                SERVICE_ALL_ACCESS = (ACCESS_MASK.STANDARD_RIGHTS_REQUIRED |
+                    SERVICE_QUERY_CONFIG |
+                    SERVICE_CHANGE_CONFIG |
+                    SERVICE_QUERY_STATUS |
+                    SERVICE_ENUMERATE_DEPENDENTS |
+                    SERVICE_START |
+                    SERVICE_STOP |
+                    SERVICE_PAUSE_CONTINUE |
+                    SERVICE_INTERROGATE |
+                    SERVICE_USER_DEFINED_CONTROL),
+
+                GENERIC_READ = ACCESS_MASK.STANDARD_RIGHTS_READ |
+                    SERVICE_QUERY_CONFIG |
+                    SERVICE_QUERY_STATUS |
+                    SERVICE_INTERROGATE |
+                    SERVICE_ENUMERATE_DEPENDENTS,
+
+                GENERIC_WRITE = ACCESS_MASK.STANDARD_RIGHTS_WRITE |
+                    SERVICE_CHANGE_CONFIG,
+
+                GENERIC_EXECUTE = ACCESS_MASK.STANDARD_RIGHTS_EXECUTE |
+                    SERVICE_START |
+                    SERVICE_STOP |
+                    SERVICE_PAUSE_CONTINUE |
+                    SERVICE_USER_DEFINED_CONTROL,
+
+                ACCESS_SYSTEM_SECURITY = ACCESS_MASK.ACCESS_SYSTEM_SECURITY,
+                DELETE = ACCESS_MASK.DELETE,
+                READ_CONTROL = ACCESS_MASK.READ_CONTROL,
+                WRITE_DAC = ACCESS_MASK.WRITE_DAC,
+                WRITE_OWNER = ACCESS_MASK.WRITE_OWNER,
+            }
+
+            [Flags]
+            public enum SERVICE_TYPE : uint
+            {
+                SERVICE_KERNEL_DRIVER = 0x00000001,
+                SERVICE_FILE_SYSTEM_DRIVER = 0x00000002,
+                SERVICE_WIN32_OWN_PROCESS = 0x00000010,
+                SERVICE_WIN32_SHARE_PROCESS = 0x00000020,
+                SERVICE_INTERACTIVE_PROCESS = 0x00000100,
+            }
+
+            public enum SERVICE_START : uint
+            {
+                SERVICE_BOOT_START = 0x00000000,
+                SERVICE_SYSTEM_START = 0x00000001,
+                SERVICE_AUTO_START = 0x00000002,
+                SERVICE_DEMAND_START = 0x00000003,
+                SERVICE_DISABLED = 0x00000004,
+            }
+
+            public enum SERVICE_ERROR
+            {
+                SERVICE_ERROR_IGNORE = 0x00000000,
+                SERVICE_ERROR_NORMAL = 0x00000001,
+                SERVICE_ERROR_SEVERE = 0x00000002,
+                SERVICE_ERROR_CRITICAL = 0x00000003,
             }
         }
 
@@ -744,6 +1035,14 @@ namespace SharpSploit.Execution
             public const UInt32 PAGE_WRITECOMBINE = 0x400;
             public const UInt32 PAGE_TARGETS_INVALID = 0x40000000;
             public const UInt32 PAGE_TARGETS_NO_UPDATE = 0x40000000;
+
+            public const UInt32 SEC_COMMIT = 0x08000000;
+            public const UInt32 SEC_IMAGE = 0x1000000;
+            public const UInt32 SEC_IMAGE_NO_EXECUTE = 0x11000000;
+            public const UInt32 SEC_LARGE_PAGES = 0x80000000;
+            public const UInt32 SEC_NOCACHE = 0x10000000;
+            public const UInt32 SEC_RESERVE = 0x4000000;
+            public const UInt32 SEC_WRITECOMBINE = 0x40000000;
 
             public const UInt32 SE_PRIVILEGE_ENABLED = 0x2;
             public const UInt32 SE_PRIVILEGE_ENABLED_BY_DEFAULT = 0x1;
@@ -949,7 +1248,7 @@ namespace SharpSploit.Execution
 
             // http://www.pinvoke.net/default.aspx/Enums.ACCESS_MASK
             [Flags]
-            public enum ACCESS_MASK : uint
+            public enum ACCESS_MASK : UInt32
             {
                 DELETE = 0x00010000,
                 READ_CONTROL = 0x00020000,
@@ -986,8 +1285,15 @@ namespace SharpSploit.Execution
                 WINSTA_EXITWINDOWS = 0x00000040,
                 WINSTA_ENUMERATE = 0x00000100,
                 WINSTA_READSCREEN = 0x00000200,
-                WINSTA_ALL_ACCESS = 0x0000037F
-            };
+                WINSTA_ALL_ACCESS = 0x0000037F,
+
+                SECTION_ALL_ACCESS = 0x10000000,
+                SECTION_QUERY = 0x0001,
+                SECTION_MAP_WRITE = 0x0002,
+                SECTION_MAP_READ = 0x0004,
+                SECTION_MAP_EXECUTE = 0x0008,
+                SECTION_EXTEND_SIZE = 0x0010
+        };
         }
 
         public class ProcessThreadsAPI
@@ -1037,7 +1343,7 @@ namespace SharpSploit.Execution
 
         public class WinCred
         {
-            #pragma warning disable 0618
+#pragma warning disable 0618
             [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
             public struct _CREDENTIAL
             {
@@ -1053,7 +1359,7 @@ namespace SharpSploit.Execution
                 public IntPtr TargetAlias;
                 public IntPtr UserName;
             }
-            #pragma warning restore 0618
+#pragma warning restore 0618
 
             public enum CRED_FLAGS : uint
             {
@@ -1190,12 +1496,106 @@ namespace SharpSploit.Execution
                 IntPtr processHandle,
                 IntPtr startAddress,
                 IntPtr parameter,
-                NT_CREATION_FLAGS creationFlags,
+                bool createSuspended,
                 int stackZeroBits,
                 int sizeOfStack,
                 int maximumStackSize,
                 IntPtr attributeList
             );
+
+            [DllImport("ntdll.dll", SetLastError = true)]
+            public static extern int NtQueryInformationProcess(
+                IntPtr hProcess,
+                PROCESSINFOCLASS pic,
+                ref PROCESS_BASIC_INFORMATION pbi,
+                int cb,
+                out int pSize
+            );
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct UNICODE_STRING
+            {
+                public UInt16 Length;
+                public UInt16 MaximumLength;
+                public IntPtr Buffer;
+            }
+
+            public struct PROCESS_BASIC_INFORMATION
+            {
+                public IntPtr ExitStatus;
+                public IntPtr PebBaseAddress;
+                public IntPtr AffinityMask;
+                public IntPtr BasePriority;
+                public UIntPtr UniqueProcessId;
+                public int InheritedFromUniqueProcessId;
+
+                public int Size
+                {
+                    get { return (int)Marshal.SizeOf(typeof(PROCESS_BASIC_INFORMATION)); }
+                }
+            }
+
+            public enum PROCESSINFOCLASS : int
+            {
+                ProcessBasicInformation = 0, // 0, q: PROCESS_BASIC_INFORMATION, PROCESS_EXTENDED_BASIC_INFORMATION
+                ProcessQuotaLimits, // qs: QUOTA_LIMITS, QUOTA_LIMITS_EX
+                ProcessIoCounters, // q: IO_COUNTERS
+                ProcessVmCounters, // q: VM_COUNTERS, VM_COUNTERS_EX
+                ProcessTimes, // q: KERNEL_USER_TIMES
+                ProcessBasePriority, // s: KPRIORITY
+                ProcessRaisePriority, // s: ULONG
+                ProcessDebugPort, // q: HANDLE
+                ProcessExceptionPort, // s: HANDLE
+                ProcessAccessToken, // s: PROCESS_ACCESS_TOKEN
+                ProcessLdtInformation, // 10
+                ProcessLdtSize,
+                ProcessDefaultHardErrorMode, // qs: ULONG
+                ProcessIoPortHandlers, // (kernel-mode only)
+                ProcessPooledUsageAndLimits, // q: POOLED_USAGE_AND_LIMITS
+                ProcessWorkingSetWatch, // q: PROCESS_WS_WATCH_INFORMATION[]; s: void
+                ProcessUserModeIOPL,
+                ProcessEnableAlignmentFaultFixup, // s: BOOLEAN
+                ProcessPriorityClass, // qs: PROCESS_PRIORITY_CLASS
+                ProcessWx86Information,
+                ProcessHandleCount, // 20, q: ULONG, PROCESS_HANDLE_INFORMATION
+                ProcessAffinityMask, // s: KAFFINITY
+                ProcessPriorityBoost, // qs: ULONG
+                ProcessDeviceMap, // qs: PROCESS_DEVICEMAP_INFORMATION, PROCESS_DEVICEMAP_INFORMATION_EX
+                ProcessSessionInformation, // q: PROCESS_SESSION_INFORMATION
+                ProcessForegroundInformation, // s: PROCESS_FOREGROUND_BACKGROUND
+                ProcessWow64Information, // q: ULONG_PTR
+                ProcessImageFileName, // q: UNICODE_STRING
+                ProcessLUIDDeviceMapsEnabled, // q: ULONG
+                ProcessBreakOnTermination, // qs: ULONG
+                ProcessDebugObjectHandle, // 30, q: HANDLE
+                ProcessDebugFlags, // qs: ULONG
+                ProcessHandleTracing, // q: PROCESS_HANDLE_TRACING_QUERY; s: size 0 disables, otherwise enables
+                ProcessIoPriority, // qs: ULONG
+                ProcessExecuteFlags, // qs: ULONG
+                ProcessResourceManagement,
+                ProcessCookie, // q: ULONG
+                ProcessImageInformation, // q: SECTION_IMAGE_INFORMATION
+                ProcessCycleTime, // q: PROCESS_CYCLE_TIME_INFORMATION
+                ProcessPagePriority, // q: ULONG
+                ProcessInstrumentationCallback, // 40
+                ProcessThreadStackAllocation, // s: PROCESS_STACK_ALLOCATION_INFORMATION, PROCESS_STACK_ALLOCATION_INFORMATION_EX
+                ProcessWorkingSetWatchEx, // q: PROCESS_WS_WATCH_INFORMATION_EX[]
+                ProcessImageFileNameWin32, // q: UNICODE_STRING
+                ProcessImageFileMapping, // q: HANDLE (input)
+                ProcessAffinityUpdateMode, // qs: PROCESS_AFFINITY_UPDATE_MODE
+                ProcessMemoryAllocationMode, // qs: PROCESS_MEMORY_ALLOCATION_MODE
+                ProcessGroupInformation, // q: USHORT[]
+                ProcessTokenVirtualizationEnabled, // s: ULONG
+                ProcessConsoleHostProcess, // q: ULONG_PTR
+                ProcessWindowInformation, // 50, q: PROCESS_WINDOW_INFORMATION
+                ProcessHandleInformation, // q: PROCESS_HANDLE_SNAPSHOT_INFORMATION // since WIN8
+                ProcessMitigationPolicy, // s: PROCESS_MITIGATION_POLICY_INFORMATION
+                ProcessDynamicFunctionTableInformation,
+                ProcessHandleCheckingMode,
+                ProcessKeepAliveCount, // q: PROCESS_KEEPALIVE_COUNT_INFORMATION
+                ProcessRevokeFileHandles, // s: PROCESS_REVOKE_FILE_HANDLES_INFORMATION
+                MaxProcessInfoClass
+            };
 
             /// <summary>
             /// NT_CREATION_FLAGS is an undocumented enum. https://processhacker.sourceforge.io/doc/ntpsapi_8h_source.html

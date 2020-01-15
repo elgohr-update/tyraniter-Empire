@@ -75,6 +75,28 @@ class Stagers(object):
                 # instantiate the module and save it to the internal cache
                 self.stagers[stagerName] = imp.load_source(stagerName, filePath).Stager(self.mainMenu, [])
 
+    def reload_stager(self, stagerToReload):
+            """
+            Reload a specific stager from the install + "/lib/stagers/*" path
+            """
+
+            rootPath = "%s/lib/stagers/" % (self.mainMenu.installPath)
+            pattern = '*.py'
+            
+            for root, dirs, files in os.walk(rootPath):
+                for filename in fnmatch.filter(files, pattern):
+                    filePath = os.path.join(root, filename)
+
+                    # don't load up the template
+                    if filename == 'template.py': continue
+                    
+                    # extract just the module name from the full path
+                    stagerName = filePath.split("/lib/stagers/")[-1][0:-3]
+
+                    # check to make sure we've found the specific module
+                    if stagerName.lower() == stagerToReload.lower():
+                        # instantiate the module and save it to the internal cache
+                        self.stagers[stagerName] = imp.load_source(stagerName, filePath).Stager(self.mainMenu, [])
 
     def set_stager_option(self, option, value):
         """

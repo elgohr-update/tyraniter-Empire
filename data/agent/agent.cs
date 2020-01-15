@@ -125,12 +125,12 @@ namespace Agent
             if (type == 100)
             {
                 StartAgentJob(type, msg, resultID);
-                return EncodePacket(type, "started", resultID);
+                return EncodePacket(type, $"{resultID}started", resultID);
             }
             else if (type == 101)
             {
                 StartAgentJob(type, msg, resultID);
-                return EncodePacket(type, "started", resultID);
+                return EncodePacket(type, $"{resultID}started", resultID);
             }
             else
             {
@@ -268,7 +268,8 @@ namespace Agent
             }
             catch (Exception e)
             {
-                output += "Task Exception: " + e.Message + Environment.NewLine + e.StackTrace;
+                String resultString = "Task Exception: " + e.Message + Environment.NewLine + e.StackTrace;
+                SendMessage(EncodePacket(type, resultString, resultID));
             }
         }
 
