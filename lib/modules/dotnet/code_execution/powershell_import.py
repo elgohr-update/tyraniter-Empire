@@ -6,11 +6,11 @@ class Module:
     def __init__(self, mainMenu, params=[]):
 
         self.info = {
-            'Name': 'Shell',
+            'Name': 'PowerShell_import',
 
             'Author': ['@harmj0y'],
 
-            'Description': ('shell cmd'),
+            'Description': ('powershell import'),
 
             'Background' : False,
 
@@ -39,7 +39,7 @@ class Module:
             'Version' : {
                 'Description'   :   'dotnet version',
                 'Required'      :   True,
-                'Value'         :   '3.5'
+                'Value'         :   '45'
             },
             'Agent' : {
                 'Description'   :   'Agent to run module on.',

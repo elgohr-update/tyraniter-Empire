@@ -113,12 +113,16 @@ namespace EmpireCompiler
 
         public byte[] GetCompressedILAssembly35()
         {
-            return File.ReadAllBytes(Common.CovenantTaskCSharpCompiledNet35Directory + this.Name + ".compiled");
+            return File.ReadAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net35] + this.Name + ".compiled");
         }
 
         public byte[] GetCompressedILAssembly40()
         {
-            return File.ReadAllBytes(Common.CovenantTaskCSharpCompiledNet40Directory + this.Name + ".compiled");
+            return File.ReadAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net40] + this.Name + ".compiled");
+        }
+        public byte[] GetCompressedILAssembly45()
+        {
+            return File.ReadAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net45] + this.Name + ".compiled");
         }
 
         public void Compile()
@@ -186,7 +190,7 @@ namespace EmpireCompiler
                                !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("SharpWMI")
                 });
                 compiled35= this.OutputKind == OutputKind.DynamicallyLinkedLibrary? Compiler.Compress(compiled35) : compiled35;
-                File.WriteAllBytes(Common.CovenantTaskCSharpCompiledNet35Directory + this.Name + (this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? ".compiled":".exe"), compiled35);
+                File.WriteAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net35] + this.Name + (this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? ".compiled":".exe"), compiled35);
                 List<Compiler.Reference> references40 = new List<Compiler.Reference>();
                 this.ReferenceSourceLibraries.ToList().ForEach(RSL =>
                 {
@@ -224,7 +228,47 @@ namespace EmpireCompiler
                 });
                 compiled40 = this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? Compiler.Compress(compiled40) : compiled40;
 
-                File.WriteAllBytes(Common.CovenantTaskCSharpCompiledNet40Directory + this.Name + (this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? ".compiled" : ".exe"), compiled40);
+                File.WriteAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net40] + this.Name + (this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? ".compiled" : ".exe"), compiled40);
+
+                List<Compiler.Reference> references45 = new List<Compiler.Reference>();
+                this.ReferenceSourceLibraries.ToList().ForEach(RSL =>
+                {
+                    references45.AddRange(
+                        RSL.ReferenceAssemblies.Where(RA => RA.DotNetVersion == Common.DotNetVersion.Net45).Select(RA =>
+                        {
+                            return new Compiler.Reference { File = RA.Location, Framework = Common.DotNetVersion.Net45, Enabled = true };
+                        })
+                    );
+                });
+                references45.AddRange(
+                    this.ReferenceAssemblies.Where(RA => RA.DotNetVersion == Common.DotNetVersion.Net45).Select(RA =>
+                    {
+                        return new Compiler.Reference { File = RA.Location, Framework = Common.DotNetVersion.Net45, Enabled = true };
+                    })
+                );
+
+                byte[] compiled45 = Compiler.Compile(new Compiler.CompilationRequest
+                {
+                    Source = this.Code,
+                    SourceDirectories = this.ReferenceSourceLibraries.Select(RSL => RSL.Location).ToList(),
+                    TargetDotNetVersion = Common.DotNetVersion.Net45,
+                    References = references45,
+                    EmbeddedResources = resources,
+                    UnsafeCompile = this.UnsafeCompile,
+                    OutputKind = this.OutputKind,
+                    Confuse = true,
+                    // TODO: Fix optimization to work with GhostPack
+                    Optimize = !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("Rubeus") &&
+                               !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("Seatbelt") &&
+                               !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("SharpDPAPI") &&
+                               !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("SharpDump") &&
+                               !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("SharpUp") &&
+                               !this.ReferenceSourceLibraries.Select(RSL => RSL.Name).Contains("SharpWMI")
+                });
+                compiled45 = this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? Compiler.Compress(compiled45) : compiled45;
+
+                File.WriteAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net45] + this.Name + (this.OutputKind == OutputKind.DynamicallyLinkedLibrary ? ".compiled" : ".exe"), compiled45);
+
             }
         }
         public enum GruntTaskingType

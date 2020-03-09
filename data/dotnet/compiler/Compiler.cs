@@ -99,7 +99,7 @@ namespace EmpireCompiler
                         return MetadataReference.CreateFromFile(R.File);
                     case Common.DotNetVersion.Net40:
                         return MetadataReference.CreateFromFile(R.File);
-                    case Common.DotNetVersion.NetCore21:
+                    case Common.DotNetVersion.Net45:
                         return MetadataReference.CreateFromFile(R.File);
                     default:
                         return null;
@@ -153,7 +153,7 @@ namespace EmpireCompiler
                                 return MetadataReference.CreateFromFile(R.File);
                             case Common.DotNetVersion.Net40:
                                 return MetadataReference.CreateFromFile(R.File);
-                            case Common.DotNetVersion.NetCore21:
+                            case Common.DotNetVersion.Net45:
                                 return MetadataReference.CreateFromFile(R.File);
                             default:
                                 return null;
@@ -214,8 +214,9 @@ namespace EmpireCompiler
             );
             doc.Load(new StringReader(ProjectFile));
             project.Load(doc);
-            project.ProbePaths.Add(Common.CovenantAssemblyReferenceNet35Directory);
-            project.ProbePaths.Add(Common.CovenantAssemblyReferenceNet40Directory);
+            project.ProbePaths.Add(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net35]);
+            project.ProbePaths.Add(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net40]);
+            project.ProbePaths.Add(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net45]);
 
             ConfuserParameters parameters = new ConfuserParameters();
             parameters.Project = project;

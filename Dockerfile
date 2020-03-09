@@ -11,33 +11,10 @@
 # Handled by GitHub Actions
 
 # -----BUILD ENTRY-----
+#dotnet core
+FROM microsoft/dotnet:3.0-sdk AS build
+WORKDIR /app
 
-# image base
-FROM python:3.7.5-buster
+COPY ./data/dotnet/compiler ./
+RUN dotnet publish -c Release -o ./bin/out -r linux-x64
 
-# extra metadata
-LABEL maintainer="bc-security"
-LABEL description="Dockerfile base for Empire server."
-
-# env setup
-ENV STAGING_KEY=RANDOM
-ENV DEBIAN_FRONTEND=noninteractive
-
-# set the def shell for ENV
-SHELL ["/bin/bash", "-c"]
-
-COPY . /empire
-
-RUN apt-get update && \
-      apt-get -y install sudo && \
-      apt-get -y install lsb-release
-
-RUN cd /empire/setup/ && \
-    ./install.sh && \
-    rm -rf /empire/data/empire*
-
-RUN python /empire/setup/setup_database.py
-
-WORKDIR /empire
-
-CMD ["python", "empire"]

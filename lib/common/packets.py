@@ -122,7 +122,8 @@ LANGUAGE = {
     'NONE': 0,
     'POWERSHELL': 1,
     'PYTHON': 2,
-    'DOTNET' : 3,
+    'DOTNET35' : 3,
+    'DOTNET45' : 4,
 }
 LANGUAGE_IDS = {}
 for name, ID in list(LANGUAGE.items()): LANGUAGE_IDS[ID] = name

@@ -176,7 +176,7 @@ namespace EmpireCompiler
             {
                 ILBytes = Compiler.Compress(ILBytes);
             }
-            File.WriteAllBytes(Common.CovenantTaskCSharpCompiledNet35Directory + "Agent.compiled", ILBytes);
+            File.WriteAllBytes(Common.CovenantTaskCSharpCompiledDirectories[Common.DotNetVersion.Net35] + "Agent.compiled", ILBytes);
             //return ILBytes;
         }
     }

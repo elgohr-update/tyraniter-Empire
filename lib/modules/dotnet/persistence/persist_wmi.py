@@ -64,7 +64,7 @@ class Module:
             'Version' : {
                 'Description'   :   'dotnet version',
                 'Required'      :   True,
-                'Value'         :   '3.5'
+                'Value'         :   '45'
             },
             'Agent' : {
                 'Description'   :   'Agent to run module on.',

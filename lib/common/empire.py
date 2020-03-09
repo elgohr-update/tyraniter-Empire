@@ -1817,7 +1817,7 @@ class AgentMenu(SubMenu):
         elif agentLanguage.lower() == 'python':
             agent_menu = PythonAgentMenu(mainMenu, sessionID)
             agent_menu.cmdloop()
-        elif agentLanguage.lower() == 'dotnet':
+        elif agentLanguage.lower() in ('dotnet35','dotnet45'):
             agent_menu = DotNetAgentMenu(mainMenu, sessionID)
             agent_menu.cmdloop()
         else:
@@ -2888,6 +2888,7 @@ class DotNetAgentMenu(SubMenu):
                 module = self.mainMenu.modules.modules['dotnet/code_execution/shell_cmd']
                 module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
                 module.options['Command']['Value'] = line
+                module.options['Version']['Value'] = self.mainMenu.agents[module.options['Agent']['Value']]['language_version']
 
                 # execute the screenshot module
                 module_menu = ModuleMenu(self.mainMenu, 'dotnet/code_execution/shell_cmd')
@@ -3061,6 +3062,7 @@ class DotNetAgentMenu(SubMenu):
             msg = "Tasked agent to run shell command whoami"
             module = self.mainMenu.modules.modules['dotnet/management/whoami']
             module.options['Agent']['Value'] = self.mainMenu.agents.get_agent_name_db(self.sessionID)
+            module.options['Version']['Value'] = self.mainMenu.agents.get_language_db(self.sessionID)[6:]
 
             # execute the screenshot module
             module_menu = ModuleMenu(self.mainMenu, 'dotnet/management/whoami')

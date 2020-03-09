@@ -29,7 +29,7 @@ class Stager:
             'Language' : {
                 'Description'   :   'Language of the stager to generate.',
                 'Required'      :   True,
-                'Value'         :   'dotnet'
+                'Value'         :   'dotnet45'
             },
             'StagerRetries' : {
                 'Description'   :   'Times for the stager to retry connecting.',

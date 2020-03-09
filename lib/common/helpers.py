@@ -1035,7 +1035,7 @@ def compile_dotnet_module_with_source(installPath,moduleName,sourceFile,outputKi
         return False 
 
 def get_dotnet_module_assembly(installPath,moduleName,version,outputKind='2'):
-    file_path =  installPath + 'data/dotnet/compiler/data/Compiled/net'+version.replace('.','')+'/'+moduleName+('.compiled' if outputKind=='2' else '.exe')
+    file_path =  installPath + 'data/dotnet/compiler/data/Compiled/net'+version+'/'+moduleName+('.compiled' if outputKind=='2' else '.exe')
     if check_dotnet_module_compiled(installPath,moduleName,version):
         with open(file_path,'rb') as f:
             return f.read()
@@ -1045,7 +1045,7 @@ def get_dotnet_module_assembly(installPath,moduleName,version,outputKind='2'):
             return f.read()
 
 def get_dotnet_module_assembly_with_source(installPath,moduleName,sourceFile,version,outputKind='2'):
-    file_path =  installPath + 'data/dotnet/compiler/data/Compiled/net'+version.replace('.','')+'/'+moduleName+('.compiled' if outputKind=='2' else '.exe')
+    file_path =  installPath + 'data/dotnet/compiler/data/Compiled/net'+version+'/'+moduleName+('.compiled' if outputKind=='2' else '.exe')
     if check_dotnet_module_compiled(installPath,moduleName,version):
         with open(file_path,'rb') as f:
             return f.read()

