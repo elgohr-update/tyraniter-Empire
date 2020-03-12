@@ -928,6 +928,9 @@ class Listener(object):
                                 # restart key negotiation
                                 Start-Negotiate -S "$ser" -SK $SK -UA $ua
                             }
+                            if ($script:MissedCheckins -eq 5){
+                                throw "error";
+                            }
                         }
                     }
                 """
